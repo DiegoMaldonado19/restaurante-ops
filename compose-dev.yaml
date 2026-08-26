@@ -1,0 +1,22 @@
+name: restaurante-ops-dev
+
+services:
+  frontend:
+    image: djmaldonado19/restaurante-ops:dev
+    pull_policy: always
+    container_name: restaurante_ops_dev
+    command: sh -c "npm install --prefer-offline --no-audit --no-fund && exec npm start -- --host 0.0.0.0 --poll 2000"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - angular_cache:/app/.angular
+    ports:
+      - "4201:4200"
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:4200/" ]
+      interval: 10s
+      start_period: 120s
+
+volumes:
+  node_modules:
+  angular_cache:

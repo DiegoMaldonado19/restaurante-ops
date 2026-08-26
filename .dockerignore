@@ -1,0 +1,16 @@
+node_modules
+dist
+.angular
+.git
+.github
+.gitignore
+Dockerfile
+.dockerignore
+compose-dev.yaml
+compose-prod.yaml
+.env
+.env.*
+.vscode
+.idea
+*.log
+README.md
