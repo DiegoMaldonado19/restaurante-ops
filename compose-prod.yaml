@@ -1,0 +1,17 @@
+name: restaurante-ops
+
+services:
+  frontend:
+    image: djmaldonado19/restaurante-ops:${IMAGE_TAG:?IMAGE_TAG is unset; the deploy writes it into .env}
+    container_name: restaurante_ops
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: ${API_BASE_URL:?refusing to start without API_BASE_URL}
+    ports:
+      - "4001:4000"
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:4000/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
