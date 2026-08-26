@@ -24,6 +24,10 @@ const angularApp = new AngularNodeAppEngine();
  * ```
  */
 
+app.get('/config.json', (_req, res) => {
+  res.json({ apiBaseUrl: process.env['API_BASE_URL'] ?? 'http://localhost:8080' });
+});
+
 /**
  * Serve static files from /browser
  */
