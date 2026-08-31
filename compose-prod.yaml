@@ -7,6 +7,7 @@ services:
     restart: unless-stopped
     environment:
       API_BASE_URL: ${API_BASE_URL:?refusing to start without API_BASE_URL}
+      TZ: America/Guatemala
     ports:
       - "4001:4000"
     healthcheck:

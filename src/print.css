@@ -1,0 +1,23 @@
+@media print {
+  /* Fuera todo lo que no es el documento: barra lateral, botones y avisos. */
+  app-shell aside,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .print-sheet {
+    box-shadow: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  a[href]::after {
+    content: '';
+  }
+}
