@@ -42,3 +42,8 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Variables de entorno locales. El .env.example si se versiona.
+.env
+*.env
+!.env.example
