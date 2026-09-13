@@ -8,178 +8,187 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
   selector: 'app-billing',
   imports: [FormField],
   template: `
-    <section class="rounded-xl bg-white p-8 shadow max-w-2xl">
-      <h1 class="text-2xl font-semibold text-slate-900">Cobro</h1>
+    <div class="min-h-full bg-[#FAF9F6] -m-6 p-6">
+      <header class="mb-8">
+        <h1 class="text-2xl font-semibold text-[#1F2422]">Cobro</h1>
+        <p class="mt-1 text-sm text-[#1F2422]/60">Precuenta, pago y calificación del servicio</p>
+      </header>
 
-      @if (issuedInvoice()) {
-        <!-- Factura emitida: confirmacion y calificacion opcional -->
-        <div class="mt-6 rounded bg-green-50 p-4 border border-green-200">
-          <p class="text-green-800 font-medium">
-            Factura #{{ issuedInvoice()!.invoice_number }} emitida por
-            {{ formatCurrency(issuedInvoice()!.total) }}
-          </p>
-        </div>
-
-        @if (!ratingSubmitted()) {
-          <h2 class="mt-6 text-lg font-medium text-slate-900">Calificar el servicio</h2>
-          <form class="mt-4 space-y-4" (submit)="onRate($event)">
-            <label class="block">
-              <span class="text-slate-700">Puntuacion (1 a 5)</span>
-              <input
-                type="number"
-                class="mt-1 w-24 rounded border border-slate-300 px-3 py-2"
-                [formField]="ratingForm.score"
-              />
-            </label>
-            <label class="block">
-              <span class="text-slate-700">Comentario (opcional)</span>
-              <textarea
-                class="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-                [formField]="ratingForm.comment_text"
-              ></textarea>
-            </label>
-
-            @if (ratingError()) {
-              <p class="text-red-600 text-sm">{{ ratingError() }}</p>
-            }
-
-            <div class="flex gap-2">
-              <button
-                type="submit"
-                class="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
-                [disabled]="ratingForm().invalid()"
-              >
-                Enviar calificacion
-              </button>
-              <button
-                type="button"
-                class="rounded border border-slate-300 px-4 py-2 text-slate-700"
-                (click)="skipRating()"
-              >
-                Omitir
-              </button>
-            </div>
-          </form>
-        } @else {
-          <p class="mt-4 text-slate-600">Calificacion registrada. Gracias.</p>
-          <button
-            type="button"
-            class="mt-4 rounded bg-slate-900 px-4 py-2 text-white"
-            (click)="reset()"
-          >
-            Cobrar otra cuenta
-          </button>
-        }
-      } @else if (selectedAccountId() && preview()) {
-        <!-- Precuenta y formulario de facturacion -->
-        <button type="button" class="mt-4 text-sm text-slate-500 underline" (click)="cancelSelection()">
-          ← Volver a la lista
-        </button>
-
-        <div class="mt-4 rounded bg-slate-50 p-4">
-          <p class="flex justify-between"><span>Subtotal</span> <span>{{ formatCurrency(preview()!.subtotal) }}</span></p>
-          <p class="flex justify-between"><span>Impuesto ({{ preview()!.tax_percent }}%)</span> <span>{{ formatCurrency(preview()!.tax_amount) }}</span></p>
-          <p class="flex justify-between text-sm text-slate-500">
-            <span>Propina sugerida ({{ preview()!.suggested_tip_percent }}%)</span>
-            <span>{{ formatCurrency(preview()!.suggested_tip_amount) }}</span>
-          </p>
-          <p class="mt-2 flex justify-between font-semibold text-lg border-t pt-2">
-            <span>Total</span> <span>{{ formatCurrency(preview()!.total) }}</span>
-          </p>
-        </div>
-
-        <h2 class="mt-6 text-lg font-medium text-slate-900">Pago</h2>
-        <form class="mt-4 space-y-4" (submit)="onIssue($event)">
-          <div class="flex gap-3 items-end">
-            <label class="block">
-              <span class="text-slate-700">Metodo</span>
-              <select
-                class="mt-1 rounded border border-slate-300 px-3 py-2"
-                [formField]="payForm.payment_method_1"
-              >
-                <option value="CASH">Efectivo</option>
-                <option value="CARD">Tarjeta</option>
-              </select>
-            </label>
-            <label class="block flex-1">
-              <span class="text-slate-700">Monto</span>
-              <input
-                type="number"
-                step="0.01"
-                class="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-                [formField]="payForm.amount_1"
-              />
-            </label>
+      <section class="rounded-2xl bg-white border border-[#1F2422]/10 p-6 max-w-2xl">
+        @if (issuedInvoice()) {
+          <!-- Factura emitida: confirmacion y calificacion opcional -->
+          <div class="rounded-lg bg-[#3B7A57]/10 border border-[#3B7A57]/30 p-4">
+            <p class="font-medium text-[#1F2422]">
+              Factura #{{ issuedInvoice()!.invoice_number }} emitida por
+              {{ formatCurrency(issuedInvoice()!.total) }}
+            </p>
           </div>
 
-          <label class="flex items-center gap-2">
-            <input type="checkbox" [formField]="payForm.split_payment" />
-            <span class="text-slate-700">Dividir el pago entre dos metodos</span>
-          </label>
+          @if (!ratingSubmitted()) {
+            <h2 class="mt-6 text-xs font-semibold uppercase tracking-wider text-[#1F2422]/50">
+              Calificar el servicio
+            </h2>
+            <form class="mt-4 space-y-4" (submit)="onRate($event)">
+              <label class="block">
+                <span class="text-sm text-[#1F2422]/70">Puntuación (1 a 5)</span>
+                <input
+                  type="number"
+                  class="mt-1 w-24 rounded-lg border border-[#1F2422]/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F6F5E]/30"
+                  [formField]="ratingForm.score"
+                />
+              </label>
+              <label class="block">
+                <span class="text-sm text-[#1F2422]/70">Comentario (opcional)</span>
+                <textarea
+                  class="mt-1 w-full rounded-lg border border-[#1F2422]/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F6F5E]/30"
+                  [formField]="ratingForm.comment_text"
+                ></textarea>
+              </label>
 
-          @if (payForm.split_payment().value()) {
+              @if (ratingError()) {
+                <p class="text-sm text-[#B5482A]">{{ ratingError() }}</p>
+              }
+
+              <div class="flex gap-2">
+                <button
+                  type="submit"
+                  class="rounded-lg bg-[#2F6F5E] px-4 py-2 text-white text-sm font-medium hover:bg-[#26594B] transition-colors disabled:opacity-40"
+                  [disabled]="ratingForm().invalid()"
+                >
+                  Enviar calificación
+                </button>
+                <button
+                  type="button"
+                  class="rounded-lg border border-[#1F2422]/15 px-4 py-2 text-[#1F2422]/70 text-sm hover:bg-[#1F2422]/5 transition-colors"
+                  (click)="skipRating()"
+                >
+                  Omitir
+                </button>
+              </div>
+            </form>
+          } @else {
+            <p class="mt-4 text-[#1F2422]/70">Calificación registrada. Gracias.</p>
+            <button
+              type="button"
+              class="mt-4 rounded-lg bg-[#2F6F5E] px-4 py-2 text-white text-sm font-medium hover:bg-[#26594B] transition-colors"
+              (click)="reset()"
+            >
+              Cobrar otra cuenta
+            </button>
+          }
+        } @else if (selectedAccountId() && preview()) {
+          <!-- Precuenta y formulario de facturacion -->
+          <button type="button" class="text-sm text-[#1F2422]/50 hover:text-[#1F2422]" (click)="cancelSelection()">
+            ← Volver a la lista
+          </button>
+
+          <div class="mt-4 rounded-lg bg-[#1F2422]/[0.03] p-4">
+            <p class="flex justify-between text-[#1F2422]"><span>Subtotal</span> <span>{{ formatCurrency(preview()!.subtotal) }}</span></p>
+            <p class="flex justify-between text-[#1F2422]"><span>Impuesto ({{ preview()!.tax_percent }}%)</span> <span>{{ formatCurrency(preview()!.tax_amount) }}</span></p>
+            <p class="flex justify-between text-sm text-[#1F2422]/60">
+              <span>Propina sugerida ({{ preview()!.suggested_tip_percent }}%)</span>
+              <span>{{ formatCurrency(preview()!.suggested_tip_amount) }}</span>
+            </p>
+            <p class="mt-2 flex justify-between font-semibold text-lg text-[#1F2422] border-t border-[#1F2422]/10 pt-2">
+              <span>Total</span> <span>{{ formatCurrency(preview()!.total) }}</span>
+            </p>
+          </div>
+
+          <h2 class="mt-6 text-xs font-semibold uppercase tracking-wider text-[#1F2422]/50">Pago</h2>
+          <form class="mt-4 space-y-4" (submit)="onIssue($event)">
             <div class="flex gap-3 items-end">
               <label class="block">
-                <span class="text-slate-700">Segundo metodo</span>
+                <span class="text-sm text-[#1F2422]/70">Método</span>
                 <select
-                  class="mt-1 rounded border border-slate-300 px-3 py-2"
-                  [formField]="payForm.payment_method_2"
+                  class="mt-1 rounded-lg border border-[#1F2422]/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F6F5E]/30"
+                  [formField]="payForm.payment_method_1"
                 >
                   <option value="CASH">Efectivo</option>
                   <option value="CARD">Tarjeta</option>
                 </select>
               </label>
               <label class="block flex-1">
-                <span class="text-slate-700">Monto</span>
+                <span class="text-sm text-[#1F2422]/70">Monto</span>
                 <input
                   type="number"
                   step="0.01"
-                  class="mt-1 w-full rounded border border-slate-300 px-3 py-2"
-                  [formField]="payForm.amount_2"
+                  class="mt-1 w-full rounded-lg border border-[#1F2422]/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F6F5E]/30"
+                  [formField]="payForm.amount_1"
                 />
               </label>
             </div>
-          }
 
-          @if (issueError()) {
-            <p class="text-red-600 text-sm">{{ issueError() }}</p>
-          }
+            <label class="flex items-center gap-2 text-sm text-[#1F2422]/70">
+              <input type="checkbox" [formField]="payForm.split_payment" />
+              Dividir el pago entre dos métodos
+            </label>
 
-          <button
-            type="submit"
-            class="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
-            [disabled]="payForm().invalid()"
-          >
-            Facturar
-          </button>
-        </form>
-      } @else {
-        <!-- Lista de cuentas listas para cobro -->
-        @if (billing.readyAccounts.isLoading()) {
-          <p class="mt-4 text-slate-500">Cargando cuentas...</p>
-        } @else {
-          <ul class="mt-4 divide-y divide-slate-200">
-            @for (account of billing.readyAccounts.value(); track account.table_account_id) {
-              <li class="flex items-center justify-between py-3">
-                <div>
-                  <p class="text-slate-900">Mesa {{ account.restaurant_table_id }} · {{ account.waiter_name }}</p>
-                  <p class="text-sm text-slate-500">{{ account.guest_count }} comensales</p>
-                </div>
-                <button
-                  type="button"
-                  class="rounded bg-slate-900 px-4 py-2 text-white text-sm"
-                  (click)="selectAccount(account.table_account_id)"
-                >
-                  Cobrar
-                </button>
-              </li>
-            } @empty {
-              <p class="py-4 text-slate-500">No hay cuentas listas para cobro.</p>
+            @if (payForm.split_payment().value()) {
+              <div class="flex gap-3 items-end">
+                <label class="block">
+                  <span class="text-sm text-[#1F2422]/70">Segundo método</span>
+                  <select
+                    class="mt-1 rounded-lg border border-[#1F2422]/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F6F5E]/30"
+                    [formField]="payForm.payment_method_2"
+                  >
+                    <option value="CASH">Efectivo</option>
+                    <option value="CARD">Tarjeta</option>
+                  </select>
+                </label>
+                <label class="block flex-1">
+                  <span class="text-sm text-[#1F2422]/70">Monto</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="mt-1 w-full rounded-lg border border-[#1F2422]/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F6F5E]/30"
+                    [formField]="payForm.amount_2"
+                  />
+                </label>
+              </div>
             }
-          </ul>
+
+            @if (issueError()) {
+              <p class="text-sm text-[#B5482A]">{{ issueError() }}</p>
+            }
+
+            <button
+              type="submit"
+              class="rounded-lg bg-[#2F6F5E] px-4 py-2 text-white text-sm font-medium hover:bg-[#26594B] transition-colors disabled:opacity-40"
+              [disabled]="payForm().invalid()"
+            >
+              Facturar
+            </button>
+          </form>
+        } @else {
+          <!-- Lista de cuentas listas para cobro -->
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#1F2422]/50">Cuentas por cobrar</h2>
+
+          @if (billing.readyAccounts.isLoading()) {
+            <p class="mt-3 text-[#1F2422]/60">Cargando cuentas...</p>
+          } @else {
+            <ul class="mt-3 divide-y divide-[#1F2422]/10">
+              @for (account of billing.readyAccounts.value(); track account.table_account_id) {
+                <li class="flex items-center justify-between py-3">
+                  <div>
+                    <p class="text-[#1F2422]">Mesa {{ account.restaurant_table_id }} · {{ account.waiter_name }}</p>
+                    <p class="text-sm text-[#1F2422]/60">{{ account.guest_count }} comensales</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="rounded-lg bg-[#2F6F5E] px-4 py-1.5 text-white text-sm font-medium hover:bg-[#26594B] transition-colors"
+                    (click)="selectAccount(account.table_account_id)"
+                  >
+                    Cobrar
+                  </button>
+                </li>
+              } @empty {
+                <p class="py-4 text-[#1F2422]/60">No hay cuentas listas para cobro.</p>
+              }
+            </ul>
+          }
         }
-      }
-    </section>
+      </section>
+    </div>
   `,
 })
 export class BillingPage {
