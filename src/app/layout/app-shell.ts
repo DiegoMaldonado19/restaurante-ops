@@ -13,8 +13,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { path: '/caja', label: 'CAJA', roles: ['CASHIER'] },
   { path: '/cobro', label: 'COBRO', roles: ['CASHIER'] },
-  // Proximos: /mesas y /comandas (WAITER), /cocina (KITCHEN),
-  //           /salon (WAITER), /clientes (CASHIER, WAITER)
+  { path: '/salon', label: 'SALÓN', roles: ['WAITER'] },
+  // Proximos: /comandas (WAITER), /cocina (KITCHEN), /clientes (CASHIER, WAITER)
 ];
 
 @Component({
