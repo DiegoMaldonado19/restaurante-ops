@@ -12,8 +12,9 @@ interface NavItem {
 // La barra oculta lo que el rol no usa; el backend prohibe de todas formas.
 const NAV_ITEMS: NavItem[] = [
   { path: '/caja', label: 'CAJA', roles: ['CASHIER'] },
+  { path: '/cobro', label: 'COBRO', roles: ['CASHIER'] },
   // Proximos: /mesas y /comandas (WAITER), /cocina (KITCHEN),
-  //           /cobro (CASHIER), /salon (WAITER), /clientes (CASHIER, WAITER)
+  //           /salon (WAITER), /clientes (CASHIER, WAITER)
 ];
 
 @Component({

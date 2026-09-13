@@ -41,6 +41,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/cashbox/pages/cash-shift.page').then((m) => m.CashShiftPage),
       },
+      {
+        path: 'cobro',
+        canActivate: [roleGuard('CASHIER')],
+        loadComponent: () =>
+          import('./modules/billing/pages/billing.page').then((m) => m.BillingPage),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
