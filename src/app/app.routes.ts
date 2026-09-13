@@ -54,6 +54,18 @@ export const routes: Routes = [
           import('./modules/dining/pages/dining.page').then((m) => m.DiningPage),
       },
       {
+        path: 'facturas',
+        canActivate: [roleGuard('CASHIER')],
+        loadComponent: () =>
+          import('./modules/billing/pages/invoice-history.page').then((m) => m.InvoiceHistoryPage),
+      },
+      {
+        path: 'facturas/:id',
+        canActivate: [roleGuard('CASHIER')],
+        loadComponent: () =>
+          import('./modules/billing/pages/receipt.page').then((m) => m.ReceiptPage),
+      },
+      {
         path: 'clientes',
         canActivate: [roleGuard('CASHIER', 'WAITER')],
         loadComponent: () =>
