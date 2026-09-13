@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, required, min, max, submit } from '@angular/forms/signals';
 import { BillingService } from '../billing.service';
 import { formatCurrency } from '../../../core/format';
@@ -118,6 +118,23 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
               </label>
             </div>
 
+            <label class="block">
+              <span class="text-sm text-[#1F2422]/70">
+                Propina · sugerida {{ formatCurrency(preview()!.suggested_tip_amount) }}
+              </span>
+              <input
+                type="number"
+                step="0.01"
+                class="mt-1 w-full rounded-lg border border-[#1F2422]/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F6F5E]/30"
+                [formField]="payForm.tip_amount"
+                (input)="syncAmountToCharge()"
+              />
+            </label>
+
+            <p class="flex justify-between text-sm font-semibold text-[#1F2422]">
+              <span>A cobrar</span> <span>{{ formatCurrency(amountToCharge()) }}</span>
+            </p>
+
             <label class="flex items-center gap-2 text-sm text-[#1F2422]/70">
               <input type="checkbox" [formField]="payForm.split_payment" />
               Dividir el pago entre dos métodos
@@ -206,6 +223,7 @@ export class BillingPage {
   protected readonly payModel = signal({
     payment_method_1: 'CASH' as PaymentMethod,
     amount_1: 0,
+    tip_amount: 0,
     split_payment: false,
     payment_method_2: 'CARD' as PaymentMethod,
     amount_2: 0,
@@ -213,7 +231,13 @@ export class BillingPage {
   protected readonly payForm = form(this.payModel, (path) => {
     required(path.amount_1, { message: 'El monto es obligatorio' });
     min(path.amount_1, 0.01, { message: 'El monto debe ser mayor que cero' });
+    min(path.tip_amount, 0, { message: 'La propina no puede ser negativa' });
   });
+
+  /** El backend exige que los pagos sumen exactamente el total con propina. */
+  protected readonly amountToCharge = computed(
+    () => (this.preview()?.total ?? 0) + Number(this.payModel().tip_amount || 0),
+  );
 
   protected readonly ratingModel = signal({ score: 5, comment_text: '' });
   protected readonly ratingForm = form(this.ratingModel, (path) => {
@@ -228,10 +252,18 @@ export class BillingPage {
     this.payModel.set({
       payment_method_1: 'CASH',
       amount_1: this.preview()!.total,
+      tip_amount: 0,
       split_payment: false,
       payment_method_2: 'CARD',
       amount_2: 0,
     });
+  }
+
+  /** Con un solo metodo de pago, el monto sigue al total con propina sin retecleo. */
+  protected syncAmountToCharge() {
+    if (this.payModel().split_payment) return;
+
+    this.payModel.update((model) => ({ ...model, amount_1: this.amountToCharge() }));
   }
 
   protected cancelSelection() {
@@ -260,6 +292,7 @@ export class BillingPage {
             payments,
             customer_id: null,
             redeem_points: null,
+            tip_amount: Number(model.tip_amount) || null,
           });
           this.issuedInvoice.set(invoice);
         } catch (error: any) {
