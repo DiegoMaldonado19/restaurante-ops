@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, required, min, max, submit } from '@angular/forms/signals';
 import { BillingService } from '../billing.service';
+import { CustomersService } from '../../customers/customers.service';
 import { formatCurrency } from '../../../core/format';
 import { InvoiceView, PaymentMethod } from '../billing.types';
 
@@ -94,6 +95,71 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
             </p>
           </div>
 
+          <h2 class="mt-6 text-xs font-semibold uppercase tracking-wider text-[#1F2422]/50">
+            Cliente y puntos
+          </h2>
+          @if (customers.selected.value(); as customer) {
+            <div class="mt-4 rounded-lg bg-[#3B7A57]/10 border border-[#3B7A57]/30 p-4">
+              <div class="flex items-start justify-between">
+                <p class="text-[#1F2422]">
+                  <strong>{{ customer.full_name }}</strong> · {{ customer.phone }}
+                  <span class="block text-sm text-[#1F2422]/60">
+                    {{ customer.available_points }} puntos disponibles
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  class="text-sm text-[#1F2422]/60 hover:text-[#B5482A] transition-colors"
+                  (click)="clearCustomer()"
+                >
+                  Quitar
+                </button>
+              </div>
+
+              <label class="mt-3 block">
+                <span class="text-sm text-[#1F2422]/70">Puntos a redimir</span>
+                <input
+                  type="number"
+                  min="0"
+                  [max]="customer.available_points"
+                  class="mt-1 w-32 rounded-lg border border-[#1F2422]/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F6F5E]/30"
+                  [value]="redeemPoints()"
+                  (input)="onRedeemPointsInput($any($event.target).value)"
+                />
+              </label>
+            </div>
+          } @else {
+            <input
+              type="search"
+              placeholder="Telefono del cliente (opcional)"
+              class="mt-4 w-full rounded-lg border border-[#1F2422]/15 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F6F5E]/30"
+              [value]="customers.search()"
+              (input)="customers.search.set($any($event.target).value)"
+            />
+            @if (customers.results.isLoading()) {
+              <p class="mt-2 text-sm text-[#1F2422]/60">Buscando...</p>
+            } @else if (customers.search().trim()) {
+              <ul class="mt-2 divide-y divide-[#1F2422]/10">
+                @for (candidate of customers.results.value().content; track candidate.customer_id) {
+                  <li>
+                    <button
+                      type="button"
+                      class="flex w-full justify-between py-2 text-left text-sm hover:bg-[#FAF9F6] transition-colors"
+                      (click)="selectCustomer(candidate.customer_id)"
+                    >
+                      <span class="text-[#1F2422]">{{ candidate.full_name }}</span>
+                      <span class="text-[#1F2422]/60">{{ candidate.phone }}</span>
+                    </button>
+                  </li>
+                } @empty {
+                  <p class="py-2 text-sm text-[#1F2422]/60">
+                    Sin coincidencias. Se puede dar de alta en Clientes.
+                  </p>
+                }
+              </ul>
+            }
+          }
+
           <h2 class="mt-6 text-xs font-semibold uppercase tracking-wider text-[#1F2422]/50">Pago</h2>
           <form class="mt-4 space-y-4" (submit)="onIssue($event)">
             <div class="flex gap-3 items-end">
@@ -130,6 +196,13 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
                 (input)="syncAmountToCharge()"
               />
             </label>
+
+            @if (discountAmount() > 0) {
+              <p class="flex justify-between text-sm text-[#3B7A57]">
+                <span>Descuento por {{ effectiveRedeemPoints() }} puntos</span>
+                <span>-{{ formatCurrency(discountAmount()) }}</span>
+              </p>
+            }
 
             <p class="flex justify-between text-sm font-semibold text-[#1F2422]">
               <span>A cobrar</span> <span>{{ formatCurrency(amountToCharge()) }}</span>
@@ -210,6 +283,9 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
 })
 export class BillingPage {
   protected readonly billing = inject(BillingService);
+  protected readonly customers = inject(CustomersService);
+
+  protected readonly redeemPoints = signal(0);
   protected readonly formatCurrency = formatCurrency;
 
   protected readonly selectedAccountId = signal<number | null>(null);
@@ -234,10 +310,34 @@ export class BillingPage {
     min(path.tip_amount, 0, { message: 'La propina no puede ser negativa' });
   });
 
-  /** El backend exige que los pagos sumen exactamente el total con propina. */
-  protected readonly amountToCharge = computed(
+  /** Bruto: subtotal + impuesto (preview.total ya los suma) + la propina cobrada. */
+  protected readonly grossTotal = computed(
     () => (this.preview()?.total ?? 0) + Number(this.payModel().tip_amount || 0),
   );
+
+  /** Nunca mas puntos de los que el cliente tiene, y siempre enteros. */
+  protected readonly effectiveRedeemPoints = computed(() => {
+    const available = this.customers.selected.value()?.available_points ?? 0;
+
+    return Math.max(0, Math.min(Math.floor(this.redeemPoints()), available));
+  });
+
+  /**
+   * Replica el calculo de BillingService.issueInvoice: puntos x currency_per_point,
+   * redondeado a dos decimales y topado al bruto. Si difiere, @PaymentsMatchTotal
+   * rechaza la factura, asi que los dos lados tienen que coincidir al centavo.
+   */
+  protected readonly discountAmount = computed(() => {
+    const perPoint = this.billing.settings.value()?.currency_per_point ?? 0;
+    const points = this.effectiveRedeemPoints();
+
+    if (!points || !perPoint) return 0;
+
+    return Math.min(Math.round(points * perPoint * 100) / 100, this.grossTotal());
+  });
+
+  /** El backend exige que los pagos sumen exactamente el total con propina. */
+  protected readonly amountToCharge = computed(() => this.grossTotal() - this.discountAmount());
 
   protected readonly ratingModel = signal({ score: 5, comment_text: '' });
   protected readonly ratingForm = form(this.ratingModel, (path) => {
@@ -290,8 +390,8 @@ export class BillingPage {
           const invoice = await this.billing.issueInvoice(accountId, {
             account_split_id: null,
             payments,
-            customer_id: null,
-            redeem_points: null,
+            customer_id: this.customers.selected.value()?.customer_id ?? null,
+            redeem_points: this.effectiveRedeemPoints() || null,
             tip_amount: Number(model.tip_amount) || null,
           });
           this.issuedInvoice.set(invoice);
@@ -325,10 +425,29 @@ export class BillingPage {
     this.reset();
   }
 
+  protected selectCustomer(customerId: number) {
+    this.customers.selectedId.set(customerId);
+    this.redeemPoints.set(0);
+  }
+
+  protected clearCustomer() {
+    this.customers.clearSelection();
+    this.customers.search.set('');
+    this.redeemPoints.set(0);
+    this.syncAmountToCharge();
+  }
+
+  /** Al mover los puntos cambia el total, y el monto de un solo pago tiene que seguirlo. */
+  protected onRedeemPointsInput(value: string) {
+    this.redeemPoints.set(Number(value) || 0);
+    this.syncAmountToCharge();
+  }
+
   protected reset() {
     this.selectedAccountId.set(null);
     this.preview.set(null);
     this.issuedInvoice.set(null);
     this.ratingSubmitted.set(false);
+    this.clearCustomer();
   }
 }
