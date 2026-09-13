@@ -10,6 +10,7 @@ import {
   IssueInvoiceRequest,
   InvoiceView,
   RateServiceRequest,
+  RestaurantSettingView,
   ServiceRatingView,
 } from './billing.types';
 
@@ -41,6 +42,16 @@ export class BillingService {
     value: computed(() => this.readyAccountsPage.value().content),
     reload: () => this.readyAccountsPage.reload(),
   };
+
+  /**
+   * El valor del punto, para calcular el descuento por redencion igual que lo hace
+   * BillingService. Sin esto los pagos no cuadrarian con el total y el backend
+   * rechazaria la factura: currency_per_point vive en restaurant_setting, no aqui.
+   */
+  readonly settings = httpResource<RestaurantSettingView | undefined>(
+    () => (this.isBrowser ? `${this.api.apiBaseUrl}/api/v1/settings` : undefined),
+    { defaultValue: undefined },
+  );
 
   async billPreview(accountId: number): Promise<BillPreviewView> {
     return firstValueFrom(

@@ -53,6 +53,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./modules/dining/pages/dining.page').then((m) => m.DiningPage),
       },
+      {
+        path: 'clientes',
+        canActivate: [roleGuard('CASHIER', 'WAITER')],
+        loadComponent: () =>
+          import('./modules/customers/pages/customers.page').then((m) => m.CustomersPage),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
