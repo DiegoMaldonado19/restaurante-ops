@@ -14,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/caja', label: 'CAJA', roles: ['CASHIER'] },
   { path: '/cobro', label: 'COBRO', roles: ['CASHIER'] },
   { path: '/salon', label: 'SALÓN', roles: ['WAITER'] },
+  { path: '/facturas', label: 'FACTURAS', roles: ['CASHIER'] },
   { path: '/clientes', label: 'CLIENTES', roles: ['CASHIER', 'WAITER'] },
   // Proximos: /comandas (WAITER), /cocina (KITCHEN)
 ];

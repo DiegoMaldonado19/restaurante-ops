@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { form, FormField, required, min, max, submit } from '@angular/forms/signals';
 import { BillingService } from '../billing.service';
 import { CustomersService } from '../../customers/customers.service';
@@ -7,7 +8,7 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
 
 @Component({
   selector: 'app-billing',
-  imports: [FormField],
+  imports: [FormField, RouterLink],
   template: `
     <div class="min-h-full bg-[#FAF9F6] -m-6 p-6">
       <header class="mb-8">
@@ -23,6 +24,12 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
               Factura #{{ issuedInvoice()!.invoice_number }} emitida por
               {{ formatCurrency(issuedInvoice()!.total) }}
             </p>
+            <a
+              [routerLink]="['/facturas', issuedInvoice()!.invoice_id]"
+              class="mt-2 inline-block text-sm text-[#2F6F5E] hover:underline"
+            >
+              Imprimir comprobante
+            </a>
           </div>
 
           @if (!ratingSubmitted()) {

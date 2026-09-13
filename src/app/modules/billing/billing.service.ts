@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { computed, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -72,12 +72,49 @@ export class BillingService {
     return invoice;
   }
 
+  // --- Historial de facturas -------------------------------------------------
+  // El rango lo fija la pantalla; vacio significa "todo", que es lo que el backend
+  // entiende cuando el parametro no viaja.
+  readonly historyFrom = signal('');
+  readonly historyTo = signal('');
+
+  private readonly invoicePage = httpResource<PageResponse<InvoiceView>>(
+    () => {
+      if (!this.isBrowser) return undefined;
+
+      const params = new URLSearchParams({ sort: 'issuedAt,desc', size: '50' });
+
+      // El backend espera LocalDateTime: el input date da solo el dia, y el rango
+      // tiene que cubrirlo entero o las facturas de la tarde quedan fuera.
+      if (this.historyFrom()) params.set('from', `${this.historyFrom()}T00:00:00`);
+      if (this.historyTo()) params.set('to', `${this.historyTo()}T23:59:59`);
+
+      return `${this.invoicesUrl()}?${params.toString()}`;
+    },
+    { defaultValue: { content: [] } },
+  );
+
+  readonly invoices = {
+    isLoading: this.invoicePage.isLoading,
+    error: this.invoicePage.error,
+    value: computed(() => this.invoicePage.value().content),
+  };
+
+  /** El comprobante completo, con sus platillos. Lo pide la vista de impresion. */
+  findInvoice(invoiceId: number): Promise<InvoiceView> {
+    return firstValueFrom(this.http.get<InvoiceView>(`${this.invoicesUrl()}/${invoiceId}`));
+  }
+
   async rateService(invoiceId: number, request: RateServiceRequest): Promise<ServiceRatingView> {
     return firstValueFrom(
       this.http.post<ServiceRatingView>(
-        `${this.api.apiBaseUrl}/api/v1/invoices/${invoiceId}/service-ratings`,
+        `${this.invoicesUrl()}/${invoiceId}/service-ratings`,
         request,
       ),
     );
+  }
+
+  private invoicesUrl(): string {
+    return `${this.api.apiBaseUrl}/api/v1/invoices`;
   }
 }
