@@ -11,8 +11,9 @@ interface NavItem {
 // Cada quien agrega aqui la entrada de su modulo cuando su pantalla existe.
 // La barra oculta lo que el rol no usa; el backend prohibe de todas formas.
 const NAV_ITEMS: NavItem[] = [
+  { path: '/caja', label: 'CAJA', roles: ['CASHIER'] },
   // Proximos: /mesas y /comandas (WAITER), /cocina (KITCHEN),
-  //           /caja y /cobro (CASHIER), /salon (WAITER), /clientes (CASHIER, WAITER)
+  //           /cobro (CASHIER), /salon (WAITER), /clientes (CASHIER, WAITER)
 ];
 
 @Component({
@@ -26,12 +27,10 @@ const NAV_ITEMS: NavItem[] = [
 
           <nav class="space-y-1">
             @for (item of visibleItems(); track item.path) {
-              <a
-                [routerLink]="item.path"
-                routerLinkActive="bg-slate-700"
-                [routerLinkActiveOptions]="{ exact: true }"
-                class="block rounded-md px-3 py-2 text-sm hover:bg-slate-800"
-              >
+              <a [routerLink]="item.path"
+                 routerLinkActive="bg-slate-700"
+                 [routerLinkActiveOptions]="{ exact: true }"
+                 class="block rounded-md px-3 py-2 text-sm hover:bg-slate-800">
                 {{ item.label }}
               </a>
             } @empty {

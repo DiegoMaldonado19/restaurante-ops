@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { AppShell } from './layout/app-shell';
 import { PublicShell } from './layout/public-shell';
-import { authGuard } from './core/role.guard';
+import { authGuard, roleGuard } from './core/role.guard';
 
 /**
  * Toda ruta de modulo va con loadComponent: es lo que mantiene el presupuesto inicial
@@ -34,6 +34,12 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () => import('./modules/home/pages/home.page').then((m) => m.HomePage),
+      },
+      {
+        path: 'caja',
+        canActivate: [roleGuard('CASHIER')],
+        loadComponent: () =>
+          import('./modules/cashbox/pages/cash-shift.page').then((m) => m.CashShiftPage),
       },
     ],
   },
