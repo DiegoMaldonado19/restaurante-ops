@@ -24,6 +24,15 @@ export interface BillPreviewView {
   total: number;
 }
 
+/** Solo se consume currency_per_point: es lo que convierte puntos en descuento. */
+export interface RestaurantSettingView {
+  setting_id: number;
+  tax_percent: number;
+  tip_suggested_percent: number;
+  points_per_currency_unit: number;
+  currency_per_point: number;
+}
+
 export interface PaymentRequest {
   method: PaymentMethod;
   amount: number;

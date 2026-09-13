@@ -14,7 +14,8 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/caja', label: 'CAJA', roles: ['CASHIER'] },
   { path: '/cobro', label: 'COBRO', roles: ['CASHIER'] },
   { path: '/salon', label: 'SALÓN', roles: ['WAITER'] },
-  // Proximos: /comandas (WAITER), /cocina (KITCHEN), /clientes (CASHIER, WAITER)
+  { path: '/clientes', label: 'CLIENTES', roles: ['CASHIER', 'WAITER'] },
+  // Proximos: /comandas (WAITER), /cocina (KITCHEN)
 ];
 
 @Component({
