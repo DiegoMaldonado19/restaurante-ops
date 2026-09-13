@@ -34,6 +34,8 @@ export interface IssueInvoiceRequest {
   payments: PaymentRequest[];
   customer_id: number | null;
   redeem_points: number | null;
+  /** Propina realmente cobrada. Entra en el total y va al turno como CASH_TIP/CARD_TIP. */
+  tip_amount: number | null;
 }
 
 export interface InvoiceView {
@@ -42,6 +44,7 @@ export interface InvoiceView {
   table_account_id: number;
   account_split_id: number | null;
   subtotal: number;
+  discount_amount: number;
   tax_amount: number;
   tip_amount: number;
   total: number;
