@@ -32,6 +32,8 @@ export class AuthService {
   readonly token = computed(() => this.session()?.access_token ?? null);
   readonly role = computed(() => this.session()?.role ?? null);
   readonly fullName = computed(() => this.session()?.full_name ?? '');
+  /** Ya viaja en POST /auth/login (`user_id`). Lo usa GET /orders?waiterId=… */
+  readonly userId = computed(() => this.session()?.user_id ?? null);
   readonly isAuthenticated = computed(() => this.session() !== null);
 
   async login(username: string, password: string): Promise<Session> {

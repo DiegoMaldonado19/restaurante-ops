@@ -6,14 +6,7 @@ import { authGuard, roleGuard } from './core/role.guard';
 /**
  * Toda ruta de modulo va con loadComponent: es lo que mantiene el presupuesto inicial
  * de 500 kB que angular.json declara y que el build de CI hace cumplir.
- * Cada quien agrega la rama de su modulo con su roleGuard, por ejemplo:
- *
- *   {
- *     path: 'cocina',
- *     canActivate: [roleGuard('KITCHEN')],
- *     loadComponent: () =>
- *       import('./modules/kitchen/pages/kitchen-queue.page').then((m) => m.KitchenQueue),
- *   },
+ * Cada quien agrega la rama de su modulo con su roleGuard.
  */
 export const routes: Routes = [
   {
@@ -52,6 +45,37 @@ export const routes: Routes = [
         canActivate: [roleGuard('WAITER')],
         loadComponent: () =>
           import('./modules/dining/pages/dining.page').then((m) => m.DiningPage),
+      },
+      {
+        path: 'mesas',
+        canActivate: [roleGuard('WAITER')],
+        loadComponent: () =>
+          import('./modules/tables/pages/table-map.page').then((m) => m.TableMapPage),
+      },
+      {
+        // :id es el table_account_id (la cuenta), no el restaurant_table_id (la mesa).
+        path: 'mesas/:id',
+        canActivate: [roleGuard('WAITER')],
+        loadComponent: () =>
+          import('./modules/tables/pages/account-detail.page').then((m) => m.AccountDetailPage),
+      },
+      {
+        path: 'comandas',
+        canActivate: [roleGuard('WAITER')],
+        loadComponent: () =>
+          import('./modules/orders/pages/order-status.page').then((m) => m.OrderStatusPage),
+      },
+      {
+        path: 'comandas/:accountId/nueva',
+        canActivate: [roleGuard('WAITER')],
+        loadComponent: () =>
+          import('./modules/orders/pages/new-round.page').then((m) => m.NewRoundPage),
+      },
+      {
+        path: 'cocina',
+        canActivate: [roleGuard('KITCHEN')],
+        loadComponent: () =>
+          import('./modules/kitchen/pages/kitchen-queue.page').then((m) => m.KitchenQueuePage),
       },
       {
         path: 'facturas',
