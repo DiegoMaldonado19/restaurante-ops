@@ -14,9 +14,11 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/caja', label: 'CAJA', roles: ['CASHIER'] },
   { path: '/cobro', label: 'COBRO', roles: ['CASHIER'] },
   { path: '/salon', label: 'SALÓN', roles: ['WAITER'] },
+  { path: '/mesas', label: 'MESAS', roles: ['WAITER'] },
+  { path: '/cocina', label: 'COCINA', roles: ['KITCHEN'] },
+  { path: '/comandas', label: 'COMANDAS', roles: ['WAITER'] },
   { path: '/facturas', label: 'FACTURAS', roles: ['CASHIER'] },
-  { path: '/clientes', label: 'CLIENTES', roles: ['CASHIER', 'WAITER'] },
-  // Proximos: /comandas (WAITER), /cocina (KITCHEN)
+  { path: '/clientes', label: 'CLIENTES', roles: ['CASHIER', 'WAITER'] },  
 ];
 
 @Component({
