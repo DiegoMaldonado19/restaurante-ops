@@ -287,9 +287,7 @@ const ITEM_SPLIT_GROUPS = [1, 2, 3, 4, 5, 6, 7, 8];
           }
         } @else {
           <p class="text-sm text-[#1F2422]/60">
-            Asigne cada platillo a una parte. Hoy el backend exige un id de sub-cuenta
-            ya creado, no un número de grupo: esta acción puede fallar hasta que se
-            corrija. La división por persona sí funciona.
+            Asigne cada platillo a una parte. Cada parte se cobra por separado desde Cobro.
           </p>
           <ul class="max-h-64 divide-y divide-[#1F2422]/10 overflow-auto rounded-lg border border-[#1F2422]/10">
             @for (item of deliverableItems(); track item.order_item_id) {
@@ -396,21 +394,8 @@ export class AccountDetailPage {
     () => this.account()?.tickets?.flatMap((ticket) => ticket.items) ?? [],
   );
 
-  /**
-   * Total estimado en el navegador: Σ unit_price × quantity de los items no
-   * CANCELLED/UNAVAILABLE, en todos los tickets. Replica exactamente el subtotal
-   * que SI calcula bien GET /accounts/{id}/bill-preview (confirmado el 2026-09-13
-   * contra el backend real: subtotal 134.0 = 55×2 + 12×2). TableAccountView.running_total
-   * y AccountSplitView.share_amount devuelven siempre 0 -- un bug confirmado y
-   * reportado en la Bitácora, no una decision de diseño de este carril. Se calcula
-   * aqui, igual que billing.page.ts ya replica el calculo de descuento de
-   * BillingService.issueInvoice, como mitigacion mientras el backend lo corrige.
-   */
-  protected readonly estimatedTotal = computed(() =>
-    this.allItems()
-      .filter((item) => item.status !== 'CANCELLED' && item.status !== 'UNAVAILABLE')
-      .reduce((total, item) => total + item.unit_price * item.quantity, 0),
-  );
+  /** El total corriente lo calcula el backend y ya incluye el sobreprecio de los modificadores. */
+  protected readonly estimatedTotal = computed(() => this.account()?.running_total ?? 0);
 
   /** Candidatos para "Dividir por ítem": entregables, sin cancelar ni no-disponibles. */
   protected readonly deliverableItems = computed(() =>

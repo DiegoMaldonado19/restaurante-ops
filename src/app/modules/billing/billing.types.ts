@@ -14,6 +14,13 @@ export interface TableAccountView {
   waiter_name: string;
 }
 
+/** Una sub-cuenta de la precuenta. Viene vacia si la cuenta no se dividio. */
+export interface SplitPreviewView {
+  account_split_id: number;
+  label: string;
+  subtotal: number;
+}
+
 export interface BillPreviewView {
   account_id: number;
   subtotal: number;
@@ -22,6 +29,7 @@ export interface BillPreviewView {
   suggested_tip_percent: number;
   suggested_tip_amount: number;
   total: number;
+  splits: SplitPreviewView[];
 }
 
 /** Solo se consume currency_per_point: es lo que convierte puntos en descuento. */

@@ -4,12 +4,14 @@ import { OrdersService } from '../orders.service';
 import { TablesService } from '../../tables/tables.service';
 import { actionLabelFor, messageFor } from '../../../core/error-messages';
 import { formatCurrency } from '../../../core/format';
-import { MenuDishView, ModifierBrief, OrderLineDTO } from '../orders.types';
+import { MenuComboView, MenuDishView, ModifierBrief, OrderLineDTO } from '../orders.types';
 import { TableAccountView } from '../../tables/tables.types';
 
+/** Una linea es un platillo suelto (con sus modificadores) o un combo. Nunca las dos. */
 interface CartLine {
   key: number;
-  dish: MenuDishView;
+  dish: MenuDishView | null;
+  combo: MenuComboView | null;
   quantity: number;
   modifierIds: number[];
   note: string;
@@ -76,18 +78,24 @@ interface CartLine {
 
           <section class="rounded-2xl bg-white border border-[#1F2422]/10 p-6">
             <h2 class="text-xs font-semibold uppercase tracking-wider text-[#1F2422]/50">Combos</h2>
-            <p class="mt-2 text-sm text-[#1F2422]/60">
-              Los combos todavía no se pueden enviar desde comandas — pendiente de que
-              <code>menu</code> publique <code>combo_id</code> en la línea de la comanda.
-            </p>
             @if (orders.menu.value().combos.length) {
-              <ul class="mt-3 divide-y divide-[#1F2422]/10">
+              <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 @for (combo of orders.menu.value().combos; track combo.combo_id) {
-                  <li class="py-2 text-sm text-[#1F2422]/50">
-                    {{ combo.name }} · {{ formatCurrency(combo.combo_price) }}
-                  </li>
+                  <button
+                    type="button"
+                    class="rounded-lg border border-[#1F2422]/10 p-4 text-left text-sm hover:bg-[#FAF9F6] transition-colors"
+                    (click)="onPickCombo(combo)"
+                  >
+                    <p class="font-semibold text-[#1F2422]">{{ combo.name }}</p>
+                    <p class="mt-1 text-[#1F2422]/60">{{ formatCurrency(combo.combo_price) }}</p>
+                    <p class="mt-1 text-xs text-[#1F2422]/50">
+                      @for (item of combo.items; track item.dish_id; let last = $last) {
+                        {{ item.quantity }}× {{ item.dish_name }}{{ last ? '' : ' + ' }}
+                      }
+                    </p>
+                  </button>
                 }
-              </ul>
+              </div>
             } @else {
               <p class="mt-2 text-sm text-[#1F2422]/40">No hay combos publicados en el menú.</p>
             }
@@ -101,7 +109,7 @@ interface CartLine {
             @for (line of cart(); track line.key) {
               <li class="py-3 space-y-2">
                 <div class="flex items-start justify-between gap-2">
-                  <p class="text-sm font-medium text-[#1F2422]">{{ line.dish.name }}</p>
+                  <p class="text-sm font-medium text-[#1F2422]">{{ lineName(line) }}</p>
                   <button
                     type="button"
                     class="text-xs text-[#1F2422]/50 hover:text-[#B5482A] transition-colors"
@@ -274,13 +282,20 @@ export class NewRoundPage {
     this.cart().reduce((total, line) => total + this.lineTotal(line), 0),
   );
 
+  protected lineName(line: CartLine): string {
+    return line.dish?.name ?? line.combo?.name ?? '';
+  }
+
   protected lineTotal(line: CartLine): number {
+    const base = line.dish?.sale_price ?? line.combo?.combo_price ?? 0;
     const extras = this.selectedModifiers(line).reduce((sum, mod) => sum + mod.extra_price, 0);
-    return (line.dish.sale_price + extras) * line.quantity;
+    return (base + extras) * line.quantity;
   }
 
   protected selectedModifiers(line: CartLine): ModifierBrief[] {
-    return line.dish.modifiers.filter((mod) => line.modifierIds.includes(mod.dish_modifier_id));
+    return (line.dish?.modifiers ?? []).filter((mod) =>
+      line.modifierIds.includes(mod.dish_modifier_id),
+    );
   }
 
   protected onPickDish(dish: MenuDishView): void {
@@ -293,10 +308,17 @@ export class NewRoundPage {
     this.modifierDialog().nativeElement.showModal();
   }
 
+  protected onPickCombo(combo: MenuComboView): void {
+    this.cart.update((lines) => [
+      ...lines,
+      { key: this.nextKey++, dish: null, combo, quantity: 1, modifierIds: [], note: '' },
+    ]);
+  }
+
   private addLine(dish: MenuDishView, modifierIds: number[]): void {
     this.cart.update((lines) => [
       ...lines,
-      { key: this.nextKey++, dish, quantity: 1, modifierIds, note: '' },
+      { key: this.nextKey++, dish, combo: null, quantity: 1, modifierIds, note: '' },
     ]);
   }
 
@@ -354,49 +376,21 @@ export class NewRoundPage {
     this.submitting.set(true);
 
     const items: OrderLineDTO[] = lines.map((line) => ({
-      dish_id: line.dish.dish_id,
+      dish_id: line.dish?.dish_id,
+      combo_id: line.combo?.combo_id,
       quantity: line.quantity,
       modifier_ids: line.modifierIds.length ? line.modifierIds : undefined,
+      note: line.note.trim() || undefined,
     }));
 
     try {
-      const ticket = await this.orders.submit(accountId, { items });
-      try {
-        await this.applyNotes(ticket.order_ticket_id, lines);
-      } catch {
-        // La ronda ya salió; la nota es un PUT aparte (PENDINGS #11). No se bloquea el envío.
-      }
+      await this.orders.submit(accountId, { items });
       await this.router.navigate(['/mesas', accountId]);
     } catch (error) {
       this.submitError.set(messageFor(error));
       this.submitErrorAction.set(actionLabelFor(error));
     } finally {
       this.submitting.set(false);
-    }
-  }
-
-  /**
-   * OrderLineDTO no tiene `note` (PENDINGS #11). Tras el POST se intenta PUT
-   * /order-items/{id} con la nota. Si el 201 llega sin items (#9), se relee el ticket.
-   */
-  private async applyNotes(ticketId: number, lines: CartLine[]): Promise<void> {
-    const noted = lines.filter((line) => line.note.trim());
-    if (!noted.length) return;
-
-    let items = (await this.orders.findTicket(ticketId)).items ?? [];
-    const unused = [...items];
-
-    for (const line of noted) {
-      const index = unused.findIndex(
-        (item) => item.dish_id === line.dish.dish_id && item.quantity === line.quantity,
-      );
-      if (index < 0) continue;
-      const [item] = unused.splice(index, 1);
-      await this.orders.updateItem(item.order_item_id, {
-        quantity: item.quantity,
-        modifier_ids: line.modifierIds.length ? line.modifierIds : undefined,
-        note: line.note.trim(),
-      });
     }
   }
 }

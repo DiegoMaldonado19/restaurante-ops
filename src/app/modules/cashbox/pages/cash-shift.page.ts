@@ -2,6 +2,8 @@ import { Component, inject, signal } from '@angular/core';
 import { form, FormField, required, min, submit } from '@angular/forms/signals';
 import { CashboxService } from '../cashbox.service';
 import { formatCurrency, formatDateTime } from '../../../core/format';
+import { messageFor } from '../../../core/error-messages';
+import { CashShiftView } from '../cashbox.types';
 
 @Component({
   selector: 'app-cash-shift',
@@ -12,6 +14,51 @@ import { formatCurrency, formatDateTime } from '../../../core/format';
         <h1 class="text-2xl font-semibold text-[#1F2422]">Caja</h1>
         <p class="mt-1 text-sm text-[#1F2422]/60">Apertura, movimientos y cierre con cuadre</p>
       </header>
+
+      @if (closedShift(); as cierre) {
+        <section class="mb-6 rounded-2xl bg-white border border-[#1F2422]/10 p-6 max-w-lg">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[#1F2422]/50">
+            Cuadre del turno {{ cierre.cash_shift_id }}
+          </h2>
+          <dl class="mt-4 space-y-2">
+            <div class="flex justify-between">
+              <dt class="text-sm text-[#1F2422]/70">Efectivo esperado</dt>
+              <dd class="font-medium text-[#1F2422]">{{ formatCurrency(cierre.expected_cash ?? 0) }}</dd>
+            </div>
+            <div class="flex justify-between">
+              <dt class="text-sm text-[#1F2422]/70">Efectivo contado</dt>
+              <dd class="font-medium text-[#1F2422]">{{ formatCurrency(cierre.counted_cash ?? 0) }}</dd>
+            </div>
+            <div class="flex justify-between border-t border-[#1F2422]/10 pt-2">
+              <dt class="text-sm font-medium text-[#1F2422]">Diferencia</dt>
+              <dd
+                class="font-semibold"
+                [class.text-[#3B7A57]]="(cierre.difference ?? 0) === 0"
+                [class.text-[#B5482A]]="(cierre.difference ?? 0) !== 0"
+              >
+                {{ formatCurrency(cierre.difference ?? 0) }}
+              </dd>
+            </div>
+          </dl>
+          <p class="mt-3 text-sm text-[#1F2422]/60">
+            @if ((cierre.difference ?? 0) === 0) {
+              El turno cuadro exacto.
+            } @else if ((cierre.difference ?? 0) > 0) {
+              Sobra efectivo en caja.
+            } @else {
+              Falta efectivo en caja.
+            }
+            Cerrado el {{ formatDateTime(cierre.closed_at!) }}.
+          </p>
+          <button
+            type="button"
+            class="mt-4 text-sm font-medium text-[#2F6F5E] hover:underline"
+            (click)="closedShift.set(null)"
+          >
+            Abrir un turno nuevo
+          </button>
+        </section>
+      }
 
       <section class="rounded-2xl bg-white border border-[#1F2422]/10 p-6 max-w-lg">
         @if (cashbox.openShifts.isLoading()) {
@@ -116,6 +163,9 @@ export class CashShiftPage {
   protected readonly openError = signal<string | null>(null);
   protected readonly closeError = signal<string | null>(null);
 
+  /** El cierre devuelve esperado, contado y diferencia: es lo unico que los deja ver. */
+  protected readonly closedShift = signal<CashShiftView | null>(null);
+
   protected readonly openModel = signal({ opening_balance: 0 });
   protected readonly openForm = form(this.openModel, (path) => {
     required(path.opening_balance, { message: 'El monto inicial es obligatorio' });
@@ -135,9 +185,10 @@ export class CashShiftPage {
     submit(this.openForm, {
       action: async () => {
         try {
+          this.closedShift.set(null);
           await this.cashbox.openShift(this.openModel());
-        } catch (error: any) {
-          this.openError.set(error?.error?.message ?? 'No se pudo abrir el turno.');
+        } catch (error) {
+          this.openError.set(messageFor(error));
         }
       },
     });
@@ -153,9 +204,9 @@ export class CashShiftPage {
     submit(this.closeForm, {
       action: async () => {
         try {
-          await this.cashbox.closeShift(shiftId, this.closeModel());
-        } catch (error: any) {
-          this.closeError.set(error?.error?.message ?? 'No se pudo cerrar el turno.');
+          this.closedShift.set(await this.cashbox.closeShift(shiftId, this.closeModel()));
+        } catch (error) {
+          this.closeError.set(messageFor(error));
         }
       },
     });

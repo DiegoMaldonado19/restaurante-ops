@@ -7,10 +7,6 @@ import { OverdueBadge } from '../../orders/components/overdue-badge';
 import { KitchenService } from '../kitchen.service';
 import { KitchenItemView } from '../kitchen.types';
 
-/** Mismo criterio que /comandas (PENDINGS #13). */
-const OVERDUE_GRACE_MINUTES = 5;
-const DEFAULT_PREP_MINUTES = 15;
-
 @Component({
   selector: 'app-kitchen-queue',
   imports: [OverdueBadge],
@@ -176,14 +172,6 @@ export class KitchenQueuePage {
     return item ? `${item.quantity}× ${this.dishName(item)}` : '';
   });
 
-  private readonly dishById = computed(() => {
-    const map = new Map<number, { name: string; prep_minutes: number }>();
-    for (const dish of this.kitchen.menu.value().dishes) {
-      map.set(dish.dish_id, { name: dish.name, prep_minutes: dish.prep_minutes });
-    }
-    return map;
-  });
-
   protected readonly receivedError = computed(() => messageFor(this.kitchen.received.error()));
   protected readonly preparingError = computed(() => messageFor(this.kitchen.preparing.error()));
 
@@ -198,10 +186,7 @@ export class KitchenQueuePage {
   }
 
   protected dishName(item: KitchenItemView): string {
-    if (item.dish_name && item.dish_name !== 'DishNamePlaceholder') {
-      return item.dish_name;
-    }
-    return this.dishById().get(item.dish_id)?.name ?? item.dish_name;
+    return item.dish_name;
   }
 
   protected modifierNames(item: KitchenItemView): string {
@@ -212,11 +197,9 @@ export class KitchenQueuePage {
     return Math.max(0, Math.floor((this.clock() - Date.parse(submittedAt)) / 60_000));
   }
 
+  /** El atraso lo calcula el backend con prep_minutes del platillo mas su margen de gracia. */
   protected itemOverdue(item: KitchenItemView): boolean {
-    this.clock();
-    if (item.overdue) return true;
-    const prep = this.dishById().get(item.dish_id)?.prep_minutes ?? DEFAULT_PREP_MINUTES;
-    return this.minutesWaiting(item.submitted_at) > prep + OVERDUE_GRACE_MINUTES;
+    return item.overdue;
   }
 
   protected async onStart(itemId: number): Promise<void> {

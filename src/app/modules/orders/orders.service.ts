@@ -30,11 +30,8 @@ export class OrdersService {
   readonly overdueOnly = signal(false);
 
   /**
-   * "Mis platillos": GET /orders?waiterId=… (camelCase, Gap 2 §3.6). No pedir nada
-   * hasta que AuthService.userId() exista: en SSR / sin sesion la URL seria invalida.
-   * CONFIRMADO el 2026-09-13: el filtro waiterId si recorta; overdue=true NO
-   * (devuelve el mismo total_elements). La pagina /comandas recorta en cliente
-   * con prep_minutes + 5 min. Ver PENDINGS-ON-BACKEND.md #12 y #13.
+   * "Mis platillos": GET /orders?waiterId=… (camelCase). No pedir nada hasta que
+   * AuthService.userId() exista: en SSR / sin sesion la URL seria invalida.
    */
   private readonly myQueuePage = httpResource<PageResponse<OrderItemView>>(
     () => {
