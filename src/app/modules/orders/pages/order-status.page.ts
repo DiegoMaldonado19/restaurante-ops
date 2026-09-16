@@ -14,9 +14,6 @@ import {
   UpdateOrderItemRequest,
 } from '../orders.types';
 
-/** Margen que el backend deberia aplicar y no aplica (PENDINGS #13). */
-const OVERDUE_GRACE_MINUTES = 5;
-const DEFAULT_PREP_MINUTES = 15;
 const QUEUE_STATUSES: OrderItemStatus[] = ['RECEIVED', 'IN_PREPARATION', 'READY'];
 const STATUS_RANK: Record<OrderItemStatus, number> = {
   READY: 0,
@@ -269,14 +266,6 @@ export class OrderStatusPage {
     return item ? `${item.quantity}× ${this.dishName(item)}` : '';
   });
 
-  private readonly dishById = computed(() => {
-    const map = new Map<number, { name: string; prep_minutes: number }>();
-    for (const dish of this.orders.menu.value().dishes) {
-      map.set(dish.dish_id, { name: dish.name, prep_minutes: dish.prep_minutes });
-    }
-    return map;
-  });
-
   /** GET /orders no trae account_id: se cruza con las cuentas OPEN (tickets). */
   private readonly itemLocation = computed(() => {
     const map = new Map<number, { accountId: number; tableId: number }>();
@@ -343,10 +332,7 @@ export class OrderStatusPage {
   protected readonly queueError = computed(() => messageFor(this.orders.myQueue.error()));
 
   protected dishName(item: OrderItemView): string {
-    if (item.dish_name && item.dish_name !== 'DishNamePlaceholder') {
-      return item.dish_name;
-    }
-    return this.dishById().get(item.dish_id)?.name ?? item.dish_name;
+    return item.dish_name;
   }
 
   protected modifierNames(item: OrderItemView): string {
@@ -357,15 +343,9 @@ export class OrderStatusPage {
     return Math.max(0, Math.floor((this.clock() - Date.parse(submittedAt)) / 60_000));
   }
 
-  /**
-   * El backend deja overdue=false siempre (PENDINGS #13). Se usa el flag si alguna
-   * vez llega true; si no, submitted_at + prep_minutes + 5 min, solo en cola.
-   */
+  /** El atraso lo calcula el backend con prep_minutes del platillo mas su margen de gracia. */
   protected itemOverdue(item: OrderItemView): boolean {
-    if (item.overdue) return true;
-    if (!QUEUE_STATUSES.includes(item.status)) return false;
-    const prep = this.dishById().get(item.dish_id)?.prep_minutes ?? DEFAULT_PREP_MINUTES;
-    return this.minutesWaiting(item.submitted_at) > prep + OVERDUE_GRACE_MINUTES;
+    return item.overdue;
   }
 
   protected statusHint(status: OrderItemStatus): string {

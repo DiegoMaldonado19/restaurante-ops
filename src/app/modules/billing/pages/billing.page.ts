@@ -4,7 +4,11 @@ import { form, FormField, required, min, max, submit } from '@angular/forms/sign
 import { BillingService } from '../billing.service';
 import { CustomersService } from '../../customers/customers.service';
 import { formatCurrency } from '../../../core/format';
+import { CashboxService } from '../../cashbox/cashbox.service';
+import { messageFor, actionLabelFor } from '../../../core/error-messages';
 import { InvoiceView, PaymentMethod } from '../billing.types';
+
+const percentOf = (amount: number, percent: number) => Math.round(amount * percent) / 100;
 
 @Component({
   selector: 'app-billing',
@@ -15,6 +19,18 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
         <h1 class="text-2xl font-semibold text-[#1F2422]">Cobro</h1>
         <p class="mt-1 text-sm text-[#1F2422]/60">Precuenta, pago y calificación del servicio</p>
       </header>
+
+      @if (!cashbox.openShifts.isLoading() && !cashbox.currentShift()) {
+        <div class="mb-6 max-w-2xl rounded-2xl border border-[#B5482A]/30 bg-[#B5482A]/10 p-4">
+          <p class="font-medium text-[#1F2422]">No hay caja abierta.</p>
+          <p class="mt-1 text-sm text-[#1F2422]/70">
+            No se puede cobrar sin un turno de caja abierto.
+          </p>
+          <a routerLink="/caja" class="mt-3 inline-block text-sm font-medium text-[#2F6F5E] hover:underline">
+            Abrir caja
+          </a>
+        </div>
+      }
 
       <section class="rounded-2xl bg-white border border-[#1F2422]/10 p-6 max-w-2xl">
         @if (issuedInvoice()) {
@@ -90,15 +106,52 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
             ← Volver a la lista
           </button>
 
+          @if (preview()!.splits.length) {
+            <h2 class="mt-4 text-xs font-semibold uppercase tracking-wider text-[#1F2422]/50">
+              Cuenta dividida
+            </h2>
+            <p class="mt-1 text-sm text-[#1F2422]/60">
+              Se cobra una sub-cuenta a la vez. La cuenta se cierra al cobrar la ultima.
+            </p>
+            <ul class="mt-3 flex flex-wrap gap-2">
+              <li>
+                <button
+                  type="button"
+                  class="rounded-lg border px-3 py-1.5 text-sm transition-colors"
+                  [class]="selectedSplitId() === null
+                    ? 'border-[#2F6F5E] bg-[#2F6F5E] text-white'
+                    : 'border-[#1F2422]/15 text-[#1F2422] hover:bg-[#FAF9F6]'"
+                  (click)="selectSplit(null)"
+                >
+                  Cuenta completa
+                </button>
+              </li>
+              @for (split of preview()!.splits; track split.account_split_id) {
+                <li>
+                  <button
+                    type="button"
+                    class="rounded-lg border px-3 py-1.5 text-sm transition-colors"
+                    [class]="selectedSplitId() === split.account_split_id
+                      ? 'border-[#2F6F5E] bg-[#2F6F5E] text-white'
+                      : 'border-[#1F2422]/15 text-[#1F2422] hover:bg-[#FAF9F6]'"
+                    (click)="selectSplit(split.account_split_id)"
+                  >
+                    {{ split.label }} · {{ formatCurrency(split.subtotal) }}
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
           <div class="mt-4 rounded-lg bg-[#1F2422]/[0.03] p-4">
-            <p class="flex justify-between text-[#1F2422]"><span>Subtotal</span> <span>{{ formatCurrency(preview()!.subtotal) }}</span></p>
-            <p class="flex justify-between text-[#1F2422]"><span>Impuesto ({{ preview()!.tax_percent }}%)</span> <span>{{ formatCurrency(preview()!.tax_amount) }}</span></p>
+            <p class="flex justify-between text-[#1F2422]"><span>Subtotal</span> <span>{{ formatCurrency(chargedSubtotal()) }}</span></p>
+            <p class="flex justify-between text-[#1F2422]"><span>Impuesto ({{ preview()!.tax_percent }}%)</span> <span>{{ formatCurrency(chargedTax()) }}</span></p>
             <p class="flex justify-between text-sm text-[#1F2422]/60">
               <span>Propina sugerida ({{ preview()!.suggested_tip_percent }}%)</span>
-              <span>{{ formatCurrency(preview()!.suggested_tip_amount) }}</span>
+              <span>{{ formatCurrency(suggestedTip()) }}</span>
             </p>
             <p class="mt-2 flex justify-between font-semibold text-lg text-[#1F2422] border-t border-[#1F2422]/10 pt-2">
-              <span>Total</span> <span>{{ formatCurrency(preview()!.total) }}</span>
+              <span>Total</span> <span>{{ formatCurrency(chargedTotal()) }}</span>
             </p>
           </div>
 
@@ -246,12 +299,15 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
 
             @if (issueError()) {
               <p class="text-sm text-[#B5482A]">{{ issueError() }}</p>
+              @if (issueAction(); as accion) {
+                <p class="text-sm text-[#1F2422]/60">Sugerencia: {{ accion }}</p>
+              }
             }
 
             <button
               type="submit"
               class="rounded-lg bg-[#2F6F5E] px-4 py-2 text-white text-sm font-medium hover:bg-[#26594B] transition-colors disabled:opacity-40"
-              [disabled]="payForm().invalid()"
+              [disabled]="payForm().invalid() || !cashbox.currentShift()"
             >
               Facturar
             </button>
@@ -291,6 +347,7 @@ import { InvoiceView, PaymentMethod } from '../billing.types';
 export class BillingPage {
   protected readonly billing = inject(BillingService);
   protected readonly customers = inject(CustomersService);
+  protected readonly cashbox = inject(CashboxService);
 
   protected readonly redeemPoints = signal(0);
   protected readonly formatCurrency = formatCurrency;
@@ -301,7 +358,32 @@ export class BillingPage {
   protected readonly ratingSubmitted = signal(false);
 
   protected readonly issueError = signal<string | null>(null);
+  protected readonly issueAction = signal<string | null>(null);
   protected readonly ratingError = signal<string | null>(null);
+
+  /** Sub-cuenta a cobrar; null cobra la cuenta entera. */
+  protected readonly selectedSplitId = signal<number | null>(null);
+
+  /** Lo que se cobra en esta factura: la sub-cuenta elegida, o la cuenta completa. */
+  protected readonly chargedSubtotal = computed(() => {
+    const bill = this.preview();
+    if (!bill) return 0;
+
+    const splitId = this.selectedSplitId();
+    if (splitId === null) return bill.subtotal;
+
+    return bill.splits.find((split) => split.account_split_id === splitId)?.subtotal ?? 0;
+  });
+
+  protected readonly chargedTax = computed(() =>
+    percentOf(this.chargedSubtotal(), this.preview()?.tax_percent ?? 0),
+  );
+
+  protected readonly suggestedTip = computed(() =>
+    percentOf(this.chargedSubtotal(), this.preview()?.suggested_tip_percent ?? 0),
+  );
+
+  protected readonly chargedTotal = computed(() => this.chargedSubtotal() + this.chargedTax());
 
   protected readonly payModel = signal({
     payment_method_1: 'CASH' as PaymentMethod,
@@ -319,7 +401,7 @@ export class BillingPage {
 
   /** Bruto: subtotal + impuesto (preview.total ya los suma) + la propina cobrada. */
   protected readonly grossTotal = computed(
-    () => (this.preview()?.total ?? 0) + Number(this.payModel().tip_amount || 0),
+    () => this.chargedTotal() + Number(this.payModel().tip_amount || 0),
   );
 
   /** Nunca mas puntos de los que el cliente tiene, y siempre enteros. */
@@ -355,10 +437,11 @@ export class BillingPage {
 
   protected async selectAccount(accountId: number) {
     this.selectedAccountId.set(accountId);
+    this.selectedSplitId.set(null);
     this.preview.set(await this.billing.billPreview(accountId));
     this.payModel.set({
       payment_method_1: 'CASH',
-      amount_1: this.preview()!.total,
+      amount_1: this.chargedTotal(),
       tip_amount: 0,
       split_payment: false,
       payment_method_2: 'CARD',
@@ -375,12 +458,26 @@ export class BillingPage {
 
   protected cancelSelection() {
     this.selectedAccountId.set(null);
+    this.selectedSplitId.set(null);
     this.preview.set(null);
+  }
+
+  protected selectSplit(splitId: number | null) {
+    this.selectedSplitId.set(splitId);
+    this.redeemPoints.set(0);
+    this.payModel.update((model) => ({
+      ...model,
+      tip_amount: 0,
+      split_payment: false,
+      amount_1: this.chargedTotal(),
+      amount_2: 0,
+    }));
   }
 
   protected onIssue(event: Event) {
     event.preventDefault();
     this.issueError.set(null);
+    this.issueAction.set(null);
 
     submit(this.payForm, {
       action: async () => {
@@ -395,15 +492,17 @@ export class BillingPage {
 
         try {
           const invoice = await this.billing.issueInvoice(accountId, {
-            account_split_id: null,
+            account_split_id: this.selectedSplitId(),
             payments,
             customer_id: this.customers.selected.value()?.customer_id ?? null,
             redeem_points: this.effectiveRedeemPoints() || null,
             tip_amount: Number(model.tip_amount) || null,
           });
           this.issuedInvoice.set(invoice);
-        } catch (error: any) {
-          this.issueError.set(error?.error?.message ?? 'No se pudo emitir la factura.');
+          this.cashbox.movements.reload();
+        } catch (error) {
+          this.issueError.set(messageFor(error));
+          this.issueAction.set(actionLabelFor(error));
         }
       },
     });
@@ -421,8 +520,8 @@ export class BillingPage {
         try {
           await this.billing.rateService(invoiceId, this.ratingModel());
           this.ratingSubmitted.set(true);
-        } catch (error: any) {
-          this.ratingError.set(error?.error?.message ?? 'No se pudo registrar la calificacion.');
+        } catch (error) {
+          this.ratingError.set(messageFor(error));
         }
       },
     });
