@@ -46,13 +46,15 @@ export interface OrderTicketView {
 }
 
 /**
- * SubmitOrderDTO.items[]. El esquema real NO tiene combo_id (Gap 1, §3.6) ni note
- * (la nota vive en UpdateOrderItemDTO, PUT /order-items/{id}). No inventar campos.
+ * SubmitOrderDTO.items[]. OpenAPI vigente: dish_id XOR combo_id (@ExactlyOneProduct),
+ * note opcional (máx. 255). El XOR lo valida el backend; este cliente no manda ambos.
  */
 export interface OrderLineDTO {
-  dish_id: number;
+  dish_id?: number;
+  combo_id?: number;
   quantity: number;
   modifier_ids?: number[];
+  note?: string;
 }
 
 export interface SubmitOrderRequest {

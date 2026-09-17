@@ -6,7 +6,6 @@ import { messageFor, actionLabelFor } from '../../../core/error-messages';
 import { formatCurrency, formatDateTime } from '../../../core/format';
 import {
   ACCOUNT_STATUS_LABEL,
-  AccountSplitView,
   ORDER_ITEM_STATUS_LABEL,
   OrderItemViewLite,
   SplitLine,
@@ -42,7 +41,7 @@ const ITEM_SPLIT_GROUPS = [1, 2, 3, 4, 5, 6, 7, 8];
             <span class="inline-flex rounded-full bg-[#1F2422]/[0.05] px-3 py-1 text-xs font-medium text-[#1F2422]/70">
               {{ ACCOUNT_STATUS_LABEL[acc.status] }}
             </span>
-            <p class="mt-2 text-2xl font-semibold text-[#1F2422]">{{ formatCurrency(estimatedTotal()) }}</p>
+            <p class="mt-2 text-2xl font-semibold text-[#1F2422]">{{ formatCurrency(acc.running_total) }}</p>
             <p class="text-xs text-[#1F2422]/50">Total acumulado</p>
           </div>
         </header>
@@ -134,21 +133,28 @@ const ITEM_SPLIT_GROUPS = [1, 2, 3, 4, 5, 6, 7, 8];
               Sub-cuentas ({{ acc.splits.count }})
             </h2>
             <ul class="mt-3 divide-y divide-[#1F2422]/10">
-              @for (split of createdSplits(); track split.account_split_id) {
-                <li class="flex items-center justify-between py-2 text-sm">
-                  <span class="text-[#1F2422]">{{ splitDisplayLabel(split) }}</span>
+              @for (split of listedSplits(); track split.account_split_id) {
+                <li class="flex items-start justify-between gap-3 py-2 text-sm">
+                  <div>
+                    <p class="flex flex-wrap items-baseline gap-x-2 text-[#1F2422]">
+                      <span>{{ split.label ?? 'Parte' }}</span>
+                      <span class="font-medium">{{ formatCurrency(split.share_amount ?? 0) }}</span>
+                    </p>
+                    @if (split.items.length) {
+                      <ul class="mt-1 space-y-0.5 text-xs text-[#1F2422]/60">
+                        @for (item of split.items; track item.order_item_id) {
+                          <li>{{ item.quantity }}× {{ item.dish_name }}</li>
+                        }
+                      </ul>
+                    }
+                  </div>
                   <button
                     type="button"
-                    class="text-xs text-[#1F2422]/50 hover:text-[#B5482A] transition-colors"
+                    class="shrink-0 text-xs text-[#1F2422]/50 hover:text-[#B5482A] transition-colors"
                     (click)="onDeleteSplit(split.account_split_id)"
                   >
                     Deshacer
                   </button>
-                </li>
-              } @empty {
-                <li class="py-2 text-sm text-[#1F2422]/50">
-                  Ya se dividió esta cuenta. El detalle de cada parte se puede ver aquí mismo justo
-                  después de crearla.
                 </li>
               }
             </ul>
@@ -287,9 +293,8 @@ const ITEM_SPLIT_GROUPS = [1, 2, 3, 4, 5, 6, 7, 8];
           }
         } @else {
           <p class="text-sm text-[#1F2422]/60">
-            Asigne cada platillo a una parte. Hoy el backend exige un id de sub-cuenta
-            ya creado, no un número de grupo: esta acción puede fallar hasta que se
-            corrija. La división por persona sí funciona.
+            Asigne cada platillo a una parte (1, 2, …). Todas las líneas entregables
+            deben quedar en alguna parte.
           </p>
           <ul class="max-h-64 divide-y divide-[#1F2422]/10 overflow-auto rounded-lg border border-[#1F2422]/10">
             @for (item of deliverableItems(); track item.order_item_id) {
@@ -396,22 +401,6 @@ export class AccountDetailPage {
     () => this.account()?.tickets?.flatMap((ticket) => ticket.items) ?? [],
   );
 
-  /**
-   * Total estimado en el navegador: Σ unit_price × quantity de los items no
-   * CANCELLED/UNAVAILABLE, en todos los tickets. Replica exactamente el subtotal
-   * que SI calcula bien GET /accounts/{id}/bill-preview (confirmado el 2026-09-13
-   * contra el backend real: subtotal 134.0 = 55×2 + 12×2). TableAccountView.running_total
-   * y AccountSplitView.share_amount devuelven siempre 0 -- un bug confirmado y
-   * reportado en la Bitácora, no una decision de diseño de este carril. Se calcula
-   * aqui, igual que billing.page.ts ya replica el calculo de descuento de
-   * BillingService.issueInvoice, como mitigacion mientras el backend lo corrige.
-   */
-  protected readonly estimatedTotal = computed(() =>
-    this.allItems()
-      .filter((item) => item.status !== 'CANCELLED' && item.status !== 'UNAVAILABLE')
-      .reduce((total, item) => total + item.unit_price * item.quantity, 0),
-  );
-
   /** Candidatos para "Dividir por ítem": entregables, sin cancelar ni no-disponibles. */
   protected readonly deliverableItems = computed(() =>
     this.allItems().filter((item) => item.status !== 'CANCELLED' && item.status !== 'UNAVAILABLE'),
@@ -419,6 +408,11 @@ export class AccountDetailPage {
 
   protected readonly hasPendingItems = computed(() =>
     this.deliverableItems().some((item) => item.status !== 'DELIVERED'),
+  );
+
+  /** Fuente de verdad nativa (GET /accounts/{id}.splits.accounts). Sobrevive a recargar. */
+  protected readonly listedSplits = computed(
+    () => this.account()?.splits?.accounts ?? [],
   );
 
   // --- Transferir ---
@@ -498,7 +492,6 @@ export class AccountDetailPage {
   protected readonly splitMode = signal<'BY_PERSON' | 'BY_ITEM'>('BY_PERSON');
   protected readonly splitError = signal<string | null>(null);
   protected readonly splitSubmitting = signal(false);
-  protected readonly createdSplits = signal<AccountSplitView[]>([]);
   protected readonly deleteSplitError = signal<string | null>(null);
 
   protected readonly personCountModel = signal({ person_count: 2 });
@@ -570,8 +563,7 @@ export class AccountDetailPage {
   }): Promise<void> {
     this.splitSubmitting.set(true);
     try {
-      const splits = await this.tables.split(this.accountId(), request);
-      this.createdSplits.set(splits);
+      await this.tables.split(this.accountId(), request);
       await this.load();
       this.closeSplitDialog();
     } catch (error) {
@@ -581,22 +573,10 @@ export class AccountDetailPage {
     }
   }
 
-  /**
-   * El backend devuelve `label` poco util para BY_ITEM ("Split#<epoch>", igual para
-   * todas las partes de una misma division). Se muestra un rotulo propio, mas claro
-   * para quien esta en la pantalla, en vez del que llega del backend.
-   */
-  protected splitDisplayLabel(split: AccountSplitView): string {
-    if (split.mode === 'BY_PERSON') return split.label ?? `Parte`;
-    const index = this.createdSplits().findIndex((s) => s.account_split_id === split.account_split_id);
-    return `Parte ${index + 1}`;
-  }
-
   protected async onDeleteSplit(splitId: number): Promise<void> {
     this.deleteSplitError.set(null);
     try {
       await this.tables.deleteSplit(splitId);
-      this.createdSplits.update((splits) => splits.filter((s) => s.account_split_id !== splitId));
       await this.load();
     } catch (error) {
       this.deleteSplitError.set(messageFor(error));
