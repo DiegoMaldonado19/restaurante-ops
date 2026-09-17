@@ -77,7 +77,7 @@ export interface UpdateTableStatusRequest {
 export interface SplitsInfo {
   count: number;
   total_amount: number;
-  /** Aditivo (OpenAPI 16 sep). Ausente solo si el JSON es anterior al cierre de #6. */
+  /** Sub-cuentas persistidas. Fuente de verdad para pintar y deshacer tras recargar. */
   accounts?: AccountSplitView[];
 }
 

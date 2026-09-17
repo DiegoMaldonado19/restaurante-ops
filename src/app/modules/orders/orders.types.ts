@@ -45,11 +45,7 @@ export interface OrderTicketView {
   derived_status: OrderItemStatus;
 }
 
-/**
- * SubmitOrderDTO.items[]. OpenAPI vigente: dish_id XOR combo_id (@ExactlyOneProduct),
- * note opcional (máx. 255). El XOR lo valida el backend; este cliente no manda ambos.
- */
-/** SubmitOrderDTO.items[]: exactamente uno de dish_id o combo_id (@ExactlyOneProduct). */
+/** SubmitOrderDTO.items[]: exactamente uno de dish_id o combo_id; note opcional (máx. 255). */
 export interface OrderLineDTO {
   dish_id?: number;
   combo_id?: number;

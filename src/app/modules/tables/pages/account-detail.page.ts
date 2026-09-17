@@ -400,9 +400,6 @@ export class AccountDetailPage {
     () => this.account()?.tickets?.flatMap((ticket) => ticket.items) ?? [],
   );
 
-  /** El total corriente lo calcula el backend y ya incluye el sobreprecio de los modificadores. */
-  protected readonly estimatedTotal = computed(() => this.account()?.running_total ?? 0);
-
   /** Candidatos para "Dividir por ítem": entregables, sin cancelar ni no-disponibles. */
   protected readonly deliverableItems = computed(() =>
     this.allItems().filter((item) => item.status !== 'CANCELLED' && item.status !== 'UNAVAILABLE'),
