@@ -1,4 +1,4 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, afterNextRender, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BillingService } from '../billing.service';
 import { InvoiceView } from '../billing.types';
@@ -146,9 +146,9 @@ export class ReceiptPage {
   protected readonly loading = signal(true);
   protected readonly failure = signal<string | null>(null);
 
-  constructor() {
-    void this.load();
-  }
+constructor() {
+  afterNextRender(() => void this.load());
+}
 
   protected print(): void {
     window.print();

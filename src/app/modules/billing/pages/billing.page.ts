@@ -9,6 +9,7 @@ import { messageFor, actionLabelFor } from '../../../core/error-messages';
 import { InvoiceView, PaymentMethod } from '../billing.types';
 
 const percentOf = (amount: number, percent: number) => Math.round(amount * percent) / 100;
+const round2 = (amount: number) => Math.round(amount * 100) / 100;
 
 @Component({
   selector: 'app-billing',
@@ -383,7 +384,7 @@ export class BillingPage {
     percentOf(this.chargedSubtotal(), this.preview()?.suggested_tip_percent ?? 0),
   );
 
-  protected readonly chargedTotal = computed(() => this.chargedSubtotal() + this.chargedTax());
+  protected readonly chargedTotal = computed(() => round2(this.chargedSubtotal() + this.chargedTax()));
 
   protected readonly payModel = signal({
     payment_method_1: 'CASH' as PaymentMethod,
@@ -400,9 +401,9 @@ export class BillingPage {
   });
 
   /** Bruto: subtotal + impuesto (preview.total ya los suma) + la propina cobrada. */
-  protected readonly grossTotal = computed(
-    () => this.chargedTotal() + Number(this.payModel().tip_amount || 0),
-  );
+ protected readonly grossTotal = computed(
+  () => round2(this.chargedTotal() + Number(this.payModel().tip_amount || 0)),
+);
 
   /** Nunca mas puntos de los que el cliente tiene, y siempre enteros. */
   protected readonly effectiveRedeemPoints = computed(() => {
