@@ -51,13 +51,9 @@ export interface MergeAccountRequest {
 }
 
 /**
- * El esquema pide un account_split_id por linea. El analisis asumia que era un
- * numero de grupo temporal (1, 2, 3...). CONFIRMADO contra el backend real el
- * 2026-09-13 (Fase 3): NO es asi. `POST /accounts/{id}/splits` en modo BY_ITEM
- * trata este campo como un id de sub-cuenta YA persistido; enviar 1 o 2 responde
- * 404 ACCOUNT_NOT_FOUND ("No existe la sub-cuenta 1."). La UI sigue enviando el
- * grupo elegido por el mesero -- es el contrato que el backend deberia aceptar --
- * y muestra el error con messageFor(). BY_PERSON con items: [] SI funciona.
+ * SplitLineDTO.account_split_id es índice de grupo (1, 2, 3…), no la PK de una
+ * sub-cuenta ya persistida. El backend crea una AccountSplit por valor distinto
+ * y devuelve los ids reales. BY_PERSON manda items: [].
  */
 export interface SplitLine {
   order_item_id: number;
@@ -81,14 +77,21 @@ export interface UpdateTableStatusRequest {
 export interface SplitsInfo {
   count: number;
   total_amount: number;
+  /** Sub-cuentas persistidas. Fuente de verdad para pintar y deshacer tras recargar. */
+  accounts?: AccountSplitView[];
 }
 
-/** Version reducida de OrderItemView: lo que esta pantalla necesita mostrar, no todo. */
+/** Version reducida de OrderItemView: lo que esta pantalla necesita mostrar, no todo.
+ *  Los opcionales ya viajan en GET /accounts/{id} (hidratados). */
 export interface OrderItemViewLite {
   order_item_id: number;
+  dish_id?: number;
   dish_name: string;
+  modifiers?: { dish_modifier_id: number; name: string; extra_price: number }[];
+  combo_id?: number | null;
   quantity: number;
   unit_price: number;
+  note?: string | null;
   status: OrderItemStatus;
   overdue: boolean;
 }

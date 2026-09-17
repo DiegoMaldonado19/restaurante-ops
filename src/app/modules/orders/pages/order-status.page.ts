@@ -409,9 +409,8 @@ export class OrderStatusPage {
   private visibleItems(): OrderItemView[] {
     // GET /orders sin status trae historial DELIVERED de dias atras; el mesero
     // opera sobre la cola viva. Entregados/cancelados no se listan aqui.
-    const items = this.orders.myQueue.value().filter((item) => QUEUE_STATUSES.includes(item.status));
-    if (!this.orders.overdueOnly()) return items;
-    return items.filter((item) => this.itemOverdue(item));
+    // overdue=true lo recorta el servidor (httpResource); aqui no se vuelve a filtrar.
+    return this.orders.myQueue.value().filter((item) => QUEUE_STATUSES.includes(item.status));
   }
 
   private async runAction(itemId: number, work: () => Promise<unknown>): Promise<boolean> {

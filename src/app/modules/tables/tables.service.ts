@@ -63,26 +63,6 @@ export class TablesService {
     );
   }
 
-  /**
-   * Mitigacion de un bug confirmado contra el backend real el 2026-09-13: GET /floor-plan
-   * no devuelve `open_account` para una mesa que ya tuvo VARIAS cuentas historicas (todo
-   * lo que ya lleva algunos dias de operacion), aunque SI tenga una cuenta OPEN vigente
-   * -- confirmado reproduciendolo en la mesa 1 del set de datos de demo (6 cuentas
-   * historicas), mientras que una mesa "nueva" con una sola cuenta si lo devuelve bien.
-   * `GET /accounts?tableId=X&status=OPEN` (ordering, no restaurant) SI filtra correcto
-   * en todos los casos probados, asi que se usa aqui como respaldo cuando floor-plan
-   * dice OCCUPIED/BILL_REQUESTED pero no trae el open_account. Ver Bitacora, Fase 3.
-   */
-  async findOpenAccountForTable(tableId: number): Promise<TableAccountView | null> {
-    const page = await firstValueFrom(
-      this.http.get<{ content: TableAccountView[] }>(
-        `${this.api.apiBaseUrl}/api/v1/accounts?tableId=${tableId}`,
-      ),
-    );
-    // La mesa puede tener una cuenta OPEN o, si ya se pidio la cuenta, BILL_REQUESTED.
-    return page.content.find((acc) => acc.status === 'OPEN' || acc.status === 'BILL_REQUESTED') ?? null;
-  }
-
   async openAccount(request: OpenAccountRequest): Promise<TableAccountView> {
     const account = await firstValueFrom(
       this.http.post<TableAccountView>(`${this.api.apiBaseUrl}/api/v1/accounts`, request),
@@ -114,11 +94,9 @@ export class TablesService {
   }
 
   /**
-   * Devuelve un arreglo de AccountSplitView, NO una TableAccountView envuelta -- confirmado
-   * contra el backend real el 2026-09-13 (Fase 3). Cada elemento llega con `items: []`
-   * (otro comportamiento confirmado: el backend no ecoa los items recien asignados en
-   * esta respuesta), asi que la pagina que llama a este metodo es quien debe recordar
-   * que item quedo en que grupo, usando el orden de `request.items` para emparejar.
+   * Devuelve AccountSplitView[] (no una TableAccountView). En BY_ITEM cada parte trae
+   * `items` hidratados; en BY_PERSON `items` llega `[]` porque no asigna platillos.
+   * La fuente de verdad para pintar y deshacer es GET /accounts/{id}.splits.accounts.
    */
   async split(accountId: number, request: SplitAccountRequest): Promise<AccountSplitView[]> {
     return firstValueFrom(

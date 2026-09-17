@@ -118,6 +118,13 @@ interface CartLine {
                     Quitar
                   </button>
                 </div>
+                @if (line.combo; as combo) {
+                  <p class="text-xs text-[#1F2422]/50">
+                    @for (item of combo.items; track item.dish_id; let last = $last) {
+                      {{ item.quantity }}× {{ item.dish_name }}{{ last ? '' : ' + ' }}
+                    }
+                  </p>
+                }
                 @if (selectedModifiers(line); as mods) {
                   @if (mods.length) {
                     <p class="text-xs text-[#1F2422]/50">
@@ -151,7 +158,7 @@ interface CartLine {
                 <p class="text-right text-sm text-[#1F2422]">{{ formatCurrency(lineTotal(line)) }}</p>
               </li>
             } @empty {
-              <p class="py-3 text-sm text-[#1F2422]/50">Agregue platillos del menú.</p>
+              <p class="py-3 text-sm text-[#1F2422]/50">Agregue platillos o combos.</p>
             }
           </ul>
 
@@ -287,9 +294,9 @@ export class NewRoundPage {
   }
 
   protected lineTotal(line: CartLine): number {
-    const base = line.dish?.sale_price ?? line.combo?.combo_price ?? 0;
+    if (line.combo) return line.combo.combo_price * line.quantity;
     const extras = this.selectedModifiers(line).reduce((sum, mod) => sum + mod.extra_price, 0);
-    return (base + extras) * line.quantity;
+    return ((line.dish?.sale_price ?? 0) + extras) * line.quantity;
   }
 
   protected selectedModifiers(line: CartLine): ModifierBrief[] {
@@ -375,13 +382,18 @@ export class NewRoundPage {
     this.submitErrorAction.set(null);
     this.submitting.set(true);
 
-    const items: OrderLineDTO[] = lines.map((line) => ({
-      dish_id: line.dish?.dish_id,
-      combo_id: line.combo?.combo_id,
-      quantity: line.quantity,
-      modifier_ids: line.modifierIds.length ? line.modifierIds : undefined,
-      note: line.note.trim() || undefined,
-    }));
+    const items: OrderLineDTO[] = lines.map((line) => {
+      const note = line.note.trim() || undefined;
+      if (line.combo) {
+        return { combo_id: line.combo.combo_id, quantity: line.quantity, note };
+      }
+      return {
+        dish_id: line.dish!.dish_id,
+        quantity: line.quantity,
+        modifier_ids: line.modifierIds.length ? line.modifierIds : undefined,
+        note,
+      };
+    });
 
     try {
       await this.orders.submit(accountId, { items });
