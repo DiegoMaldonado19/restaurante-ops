@@ -53,6 +53,7 @@ export class OrdersService {
     reload: () => this.myQueuePage.reload(),
   };
 
+  /** POST /accounts/{id}/orders. El 201 ya trae las líneas (nombres y nota); no se relee el ticket. */
   async submit(accountId: number, request: SubmitOrderRequest): Promise<OrderTicketView> {
     const ticket = await firstValueFrom(
       this.http.post<OrderTicketView>(
@@ -62,13 +63,6 @@ export class OrdersService {
     );
     this.myQueue.reload();
     return ticket;
-  }
-
-  /** El 201 de submit a veces llega con items: [] (PENDINGS #9). Este GET hidrata la ronda. */
-  async findTicket(ticketId: number): Promise<OrderTicketView> {
-    return firstValueFrom(
-      this.http.get<OrderTicketView>(`${this.api.apiBaseUrl}/api/v1/orders/${ticketId}`),
-    );
   }
 
   async updateItem(itemId: number, request: UpdateOrderItemRequest): Promise<OrderItemView> {

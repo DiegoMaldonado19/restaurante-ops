@@ -375,13 +375,18 @@ export class NewRoundPage {
     this.submitErrorAction.set(null);
     this.submitting.set(true);
 
-    const items: OrderLineDTO[] = lines.map((line) => ({
-      dish_id: line.dish?.dish_id,
-      combo_id: line.combo?.combo_id,
-      quantity: line.quantity,
-      modifier_ids: line.modifierIds.length ? line.modifierIds : undefined,
-      note: line.note.trim() || undefined,
-    }));
+    const items: OrderLineDTO[] = lines.map((line) => {
+      const note = line.note.trim() || undefined;
+      if (line.combo) {
+        return { combo_id: line.combo.combo_id, quantity: line.quantity, note };
+      }
+      return {
+        dish_id: line.dish!.dish_id,
+        quantity: line.quantity,
+        modifier_ids: line.modifierIds.length ? line.modifierIds : undefined,
+        note,
+      };
+    });
 
     try {
       await this.orders.submit(accountId, { items });
