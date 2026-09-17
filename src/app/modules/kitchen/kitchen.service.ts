@@ -5,7 +5,6 @@ import { firstValueFrom } from 'rxjs';
 import { ApiConfig } from '../../api-config';
 import {
   KitchenItemView,
-  MenuView,
   OrderItemStatus,
   PageResponse,
   UpdateOrderItemStatusRequest,
@@ -36,12 +35,6 @@ export class KitchenService {
         ? `${this.api.apiBaseUrl}/api/v1/orders?status=IN_PREPARATION&size=100`
         : undefined,
     { defaultValue: { content: [] } },
-  );
-
-  /** Solo lectura: nombres y prep_minutes (PENDINGS #7 y #13). */
-  readonly menu = httpResource<MenuView>(
-    () => (this.isBrowser ? `${this.api.apiBaseUrl}/api/v1/menu` : undefined),
-    { defaultValue: { dishes: [] } },
   );
 
   readonly received = {

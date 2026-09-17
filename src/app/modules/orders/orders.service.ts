@@ -32,6 +32,8 @@ export class OrdersService {
   /**
    * "Mis platillos": GET /orders?waiterId=… (camelCase). No pedir nada hasta que
    * AuthService.userId() exista: en SSR / sin sesion la URL seria invalida.
+   * waiterId recorta al mesero; overdue=true recorta vencidos en el servidor.
+   * La pagina no vuelve a filtrar por overdue.
    */
   private readonly myQueuePage = httpResource<PageResponse<OrderItemView>>(
     () => {
@@ -51,6 +53,7 @@ export class OrdersService {
     reload: () => this.myQueuePage.reload(),
   };
 
+  /** POST /accounts/{id}/orders. El 201 ya trae las líneas (nombres y nota); no se relee el ticket. */
   async submit(accountId: number, request: SubmitOrderRequest): Promise<OrderTicketView> {
     const ticket = await firstValueFrom(
       this.http.post<OrderTicketView>(
@@ -60,13 +63,6 @@ export class OrdersService {
     );
     this.myQueue.reload();
     return ticket;
-  }
-
-  /** El 201 de submit a veces llega con items: [] (PENDINGS #9). Este GET hidrata la ronda. */
-  async findTicket(ticketId: number): Promise<OrderTicketView> {
-    return firstValueFrom(
-      this.http.get<OrderTicketView>(`${this.api.apiBaseUrl}/api/v1/orders/${ticketId}`),
-    );
   }
 
   async updateItem(itemId: number, request: UpdateOrderItemRequest): Promise<OrderItemView> {

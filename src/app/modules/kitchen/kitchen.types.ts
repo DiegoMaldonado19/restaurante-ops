@@ -32,16 +32,6 @@ export interface UpdateOrderItemStatusRequest {
   status: OrderItemStatus;
 }
 
-export interface MenuDishBrief {
-  dish_id: number;
-  name: string;
-  prep_minutes: number;
-}
-
-export interface MenuView {
-  dishes: MenuDishBrief[];
-}
-
 export interface PageResponse<T> {
   content: T[];
 }

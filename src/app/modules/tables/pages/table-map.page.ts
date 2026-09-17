@@ -1,19 +1,16 @@
-import { Component, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { form, FormField, max, min, required, submit } from '@angular/forms/signals';
 import { TablesService } from '../tables.service';
 import { messageFor, actionLabelFor } from '../../../core/error-messages';
 import { formatCurrency, formatDateTime } from '../../../core/format';
 import {
-  FloorPlanRow,
   STATUS_BAR,
   STATUS_DOT,
   STATUS_LABEL,
   TableStatus,
   VALID_TRANSITIONS,
 } from '../tables.types';
-
-type OpenAccountSummary = NonNullable<FloorPlanRow['open_account']>;
 
 @Component({
   selector: 'app-table-map',
@@ -48,7 +45,7 @@ type OpenAccountSummary = NonNullable<FloorPlanRow['open_account']>;
                 </div>
                 <p class="mt-1 text-[#1F2422]/60">{{ row.capacity }} personas</p>
 
-                @if (openAccountOf(row); as openAccount) {
+                @if (row.open_account; as openAccount) {
                   <!-- Cuenta abierta: la tarjeta entera lleva al detalle. -->
                   <a
                     [routerLink]="['/mesas', openAccount.table_account_id]"
@@ -82,8 +79,6 @@ type OpenAccountSummary = NonNullable<FloorPlanRow['open_account']>;
                   >
                     Ver en Salón
                   </a>
-                } @else if (isResolvingAccount(row.restaurant_table_id)) {
-                  <p class="mt-2 text-xs text-[#1F2422]/50">Buscando la cuenta…</p>
                 } @else {
                   <!-- OCCUPIED/BILL_REQUESTED sin cuenta abierta: la mesa quedo mal de verdad. -->
                   <p class="mt-2 text-xs text-[#B5482A]">Sin cuenta asociada</p>
@@ -212,62 +207,6 @@ export class TableMapPage {
 
   protected floorPlanError(): string {
     return messageFor(this.tables.floorPlan.error());
-  }
-
-  /**
-   * Respaldo del bug confirmado de GET /floor-plan (ver tables.service.ts): cuando una
-   * mesa OCCUPIED/BILL_REQUESTED no trae `open_account`, se busca la cuenta real via
-   * GET /accounts?tableId=X en vez de asumir que la mesa quedo mal de verdad.
-   */
-  private readonly fallbackAccounts = signal<Map<number, OpenAccountSummary>>(new Map());
-  private readonly resolvingTables = signal<Set<number>>(new Set());
-
-  constructor() {
-    effect(() => {
-      for (const row of this.tables.floorPlan.value()) {
-        const needsFallback =
-          (row.status === 'OCCUPIED' || row.status === 'BILL_REQUESTED') && !row.open_account;
-
-        if (
-          needsFallback &&
-          !this.fallbackAccounts().has(row.restaurant_table_id) &&
-          !this.resolvingTables().has(row.restaurant_table_id)
-        ) {
-          void this.resolveFallbackAccount(row.restaurant_table_id);
-        }
-      }
-    });
-  }
-
-  private async resolveFallbackAccount(tableId: number): Promise<void> {
-    this.resolvingTables.update((set) => new Set(set).add(tableId));
-    try {
-      const account = await this.tables.findOpenAccountForTable(tableId);
-      if (account) {
-        this.fallbackAccounts.update((map) =>
-          new Map(map).set(tableId, {
-            table_account_id: account.table_account_id,
-            waiter_name: account.waiter_name,
-            opened_at: account.opened_at,
-            running_total: account.running_total,
-          }),
-        );
-      }
-    } finally {
-      this.resolvingTables.update((set) => {
-        const next = new Set(set);
-        next.delete(tableId);
-        return next;
-      });
-    }
-  }
-
-  protected openAccountOf(row: FloorPlanRow): OpenAccountSummary | null {
-    return row.open_account ?? this.fallbackAccounts().get(row.restaurant_table_id) ?? null;
-  }
-
-  protected isResolvingAccount(tableId: number): boolean {
-    return this.resolvingTables().has(tableId);
   }
 
   // --- Abrir cuenta ---

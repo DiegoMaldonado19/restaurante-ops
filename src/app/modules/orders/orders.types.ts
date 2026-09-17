@@ -45,7 +45,7 @@ export interface OrderTicketView {
   derived_status: OrderItemStatus;
 }
 
-/** SubmitOrderDTO.items[]: exactamente uno de dish_id o combo_id (@ExactlyOneProduct). */
+/** SubmitOrderDTO.items[]: exactamente uno de dish_id o combo_id; note opcional (máx. 255). */
 export interface OrderLineDTO {
   dish_id?: number;
   combo_id?: number;
