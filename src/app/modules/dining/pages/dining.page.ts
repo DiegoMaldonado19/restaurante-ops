@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { form, FormField, required, min, submit } from '@angular/forms/signals';
 import { DiningService } from '../dining.service';
 import { TableStatus } from '../dining.types';
+import { messageFor } from '../../../core/error-messages';
 import { formatDateTime } from '../../../core/format';
 
 const STATUS_LABEL: Record<TableStatus, string> = {
@@ -224,8 +225,8 @@ export class DiningPage {
     this.actionError.set(null);
     try {
       await this.dining.seatReservation(reservationId);
-    } catch (error: any) {
-      this.actionError.set(error?.error?.message ?? 'No se pudo sentar la reserva.');
+    } catch (error) {
+      this.actionError.set(messageFor(error));
     }
   }
 
@@ -236,8 +237,8 @@ export class DiningPage {
         reason: 'CUSTOMER_CANCELLED',
         note: null,
       });
-    } catch (error: any) {
-      this.actionError.set(error?.error?.message ?? 'No se pudo cancelar la reserva.');
+    } catch (error) {
+      this.actionError.set(messageFor(error));
     }
   }
 
@@ -250,8 +251,8 @@ export class DiningPage {
     }
     try {
       await this.dining.seatWaitlistEntry(entryId, { table_id: tableId });
-    } catch (error: any) {
-      this.actionError.set(error?.error?.message ?? 'No se pudo sentar de la lista de espera.');
+    } catch (error) {
+      this.actionError.set(messageFor(error));
     }
   }
 
@@ -259,8 +260,8 @@ export class DiningPage {
     this.actionError.set(null);
     try {
       await this.dining.removeWaitlistEntry(entryId);
-    } catch (error: any) {
-      this.actionError.set(error?.error?.message ?? 'No se pudo retirar de la lista.');
+    } catch (error) {
+      this.actionError.set(messageFor(error));
     }
   }
 
@@ -273,8 +274,8 @@ export class DiningPage {
         try {
           await this.dining.createWaitlistEntry(this.waitlistModel());
           this.waitlistModel.set({ customer_name: '', customer_phone: '', guest_count: 1 });
-        } catch (error: any) {
-          this.waitlistError.set(error?.error?.message ?? 'No se pudo agregar a la cola.');
+        } catch (error) {
+          this.waitlistError.set(messageFor(error));
         }
       },
     });

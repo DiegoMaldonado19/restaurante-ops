@@ -293,8 +293,7 @@ const ITEM_SPLIT_GROUPS = [1, 2, 3, 4, 5, 6, 7, 8];
           }
         } @else {
           <p class="text-sm text-[#1F2422]/60">
-            Asigne cada platillo a una parte (1, 2, …). Todas las líneas entregables
-            deben quedar en alguna parte.
+            Asigne cada platillo a una parte. Cada parte se cobra por separado desde Cobro.
           </p>
           <ul class="max-h-64 divide-y divide-[#1F2422]/10 overflow-auto rounded-lg border border-[#1F2422]/10">
             @for (item of deliverableItems(); track item.order_item_id) {
@@ -400,6 +399,9 @@ export class AccountDetailPage {
   private readonly allItems = computed<OrderItemViewLite[]>(
     () => this.account()?.tickets?.flatMap((ticket) => ticket.items) ?? [],
   );
+
+  /** El total corriente lo calcula el backend y ya incluye el sobreprecio de los modificadores. */
+  protected readonly estimatedTotal = computed(() => this.account()?.running_total ?? 0);
 
   /** Candidatos para "Dividir por ítem": entregables, sin cancelar ni no-disponibles. */
   protected readonly deliverableItems = computed(() =>

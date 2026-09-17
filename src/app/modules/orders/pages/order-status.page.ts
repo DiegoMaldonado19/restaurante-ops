@@ -343,6 +343,7 @@ export class OrderStatusPage {
     return Math.max(0, Math.floor((this.clock() - Date.parse(submittedAt)) / 60_000));
   }
 
+  /** El atraso lo calcula el backend con prep_minutes del platillo mas su margen de gracia. */
   protected itemOverdue(item: OrderItemView): boolean {
     return item.overdue;
   }
