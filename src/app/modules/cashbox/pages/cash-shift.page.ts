@@ -3,7 +3,7 @@ import { form, FormField, required, min, submit } from '@angular/forms/signals';
 import { CashboxService } from '../cashbox.service';
 import { formatCurrency, formatDateTime } from '../../../core/format';
 import { messageFor } from '../../../core/error-messages';
-import { CashShiftView } from '../cashbox.types';
+import { CashShiftView, MovementType } from '../cashbox.types';
 
 @Component({
   selector: 'app-cash-shift',
@@ -112,7 +112,7 @@ import { CashShiftView } from '../cashbox.types';
             <ul class="mt-2 divide-y divide-[#1F2422]/10">
               @for (movement of cashbox.movements.value(); track movement.cash_movement_id) {
                 <li class="flex justify-between py-2">
-                  <span class="text-[#1F2422]">{{ movement.movement_type }}</span>
+                  <span class="text-[#1F2422]">{{ movementLabels[movement.movement_type] ?? movement.movement_type }}</span>
                   <span class="font-medium text-[#1F2422]">{{ formatCurrency(movement.amount) }}</span>
                 </li>
               } @empty {
@@ -159,6 +159,15 @@ export class CashShiftPage {
   protected readonly cashbox = inject(CashboxService);
   protected readonly formatCurrency = formatCurrency;
   protected readonly formatDateTime = formatDateTime;
+
+  protected readonly movementLabels: Record<MovementType, string> = {
+    OPENING_BALANCE: 'Apertura de caja',
+    CASH_SALE: 'Venta en efectivo',
+    CASH_TIP: 'Propina en efectivo',
+    CARD_SALE: 'Venta con tarjeta',
+    CARD_TIP: 'Propina con tarjeta',
+    LOYALTY_REDEMPTION: 'Canje de puntos de lealtad',
+  };
 
   protected readonly openError = signal<string | null>(null);
   protected readonly closeError = signal<string | null>(null);

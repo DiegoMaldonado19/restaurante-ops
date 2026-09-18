@@ -1,14 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BillingService } from '../billing.service';
 import { messageFor } from '../../../core/error-messages';
 import { formatCurrency, formatDateTime } from '../../../core/format';
 
-/**
- * Historial de facturas emitidas. El rango de fechas es el filtro que usa el cajero al
- * cuadrar su turno; los de mesero y cliente existen en el backend y se agregan cuando
- * haya un selector de donde sacarlos.
- */
 @Component({
   selector: 'app-invoice-history',
   imports: [RouterLink],
@@ -57,49 +52,57 @@ import { formatCurrency, formatDateTime } from '../../../core/format';
         } @else if (billing.invoices.error()) {
           <p class="mt-6 text-sm text-[#B5482A]">{{ error() }}</p>
         } @else {
-          <table class="mt-6 w-full text-sm">
-            <thead>
-              <tr class="border-b border-[#1F2422]/15 text-left text-xs uppercase tracking-wider text-[#1F2422]/50">
-                <th class="pb-2 font-semibold">No.</th>
-                <th class="pb-2 font-semibold">Fecha</th>
-                <th class="pb-2 font-semibold">Cuenta</th>
-                <th class="pb-2 text-right font-semibold">Total</th>
-                <th class="pb-2 font-semibold">Estado</th>
-                <th class="pb-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (invoice of billing.invoices.value(); track invoice.invoice_id) {
-                <tr class="border-b border-[#1F2422]/5">
-                  <td class="py-3 text-[#1F2422]">{{ invoice.invoice_number }}</td>
-                  <td class="py-3 text-[#1F2422]/70">{{ asDateTime(invoice.issued_at) }}</td>
-                  <td class="py-3 text-[#1F2422]/70">{{ invoice.table_account_id }}</td>
-                  <td class="py-3 text-right text-[#1F2422]">{{ asCurrency(invoice.total) }}</td>
-                  <td class="py-3">
-                    @if (invoice.status === 'VOIDED') {
-                      <span class="text-[#B5482A]">Anulada</span>
-                    } @else {
-                      <span class="text-[#3B7A57]">Emitida</span>
-                    }
-                  </td>
-                  <td class="py-3 text-right">
-                    <a
-                      [routerLink]="['/facturas', invoice.invoice_id]"
-                      class="text-[#2F6F5E] hover:underline"
-                    >
-                      Comprobante
-                    </a>
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="6" class="py-6 text-[#1F2422]/60">
-                    No hay facturas en ese rango.
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+          <div class="mt-6 overflow-x-auto">
+            <div class="max-h-[28rem] overflow-y-auto">
+              <table class="w-full text-sm">
+                <thead class="sticky top-0 bg-white">
+                  <tr class="border-b border-[#1F2422]/15 text-left text-xs uppercase tracking-wider text-[#1F2422]/50">
+                    <th class="pb-2 pr-4 font-semibold">No.</th>
+                    <th class="pb-2 pr-4 font-semibold">Fecha</th>
+                    <th class="pb-2 pr-4 font-semibold">Cuenta</th>
+                    <th class="pb-2 pr-4 text-right font-semibold">Total</th>
+                    <th class="pb-2 pr-4 font-semibold">Estado</th>
+                    <th class="pb-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (invoice of billing.invoices.value(); track invoice.invoice_id) {
+                    <tr class="border-b border-[#1F2422]/5">
+                      <td class="py-3 pr-4 text-[#1F2422]">{{ invoice.invoice_number }}</td>
+                      <td class="py-3 pr-4 text-[#1F2422]/70">{{ asDateTime(invoice.issued_at) }}</td>
+                      <td class="py-3 pr-4 text-[#1F2422]/70">{{ invoice.table_account_id }}</td>
+                      <td class="py-3 pr-4 text-right text-[#1F2422]">{{ asCurrency(invoice.total) }}</td>
+                      <td class="py-3 pr-4">
+                        @if (invoice.status === 'VOIDED') {
+                          <span class="text-[#B5482A]">Anulada</span>
+                        } @else {
+                          <span class="text-[#3B7A57]">Emitida</span>
+                        }
+                      </td>
+                      <td class="py-3 text-right">
+                        <a [routerLink]="['/facturas', invoice.invoice_id]" class="text-[#2F6F5E] hover:underline">
+                          Comprobante
+                        </a>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="6" class="py-6 text-[#1F2422]/60">
+                        No hay facturas en ese rango.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          @if (billing.invoices.value().length) {
+            <div class="mt-3 flex justify-between border-t border-[#1F2422]/15 pt-3 text-sm font-semibold text-[#1F2422]">
+              <span>{{ billing.invoices.value().length }} factura(s)</span>
+              <span>{{ asCurrency(totalSum()) }}</span>
+            </div>
+          }
         }
       </section>
     </div>
@@ -109,6 +112,10 @@ export class InvoiceHistoryPage {
   protected readonly billing = inject(BillingService);
   protected readonly asCurrency = formatCurrency;
   protected readonly asDateTime = formatDateTime;
+
+  protected readonly totalSum = computed(() =>
+    this.billing.invoices.value().reduce((sum, invoice) => sum + invoice.total, 0),
+  );
 
   protected error(): string {
     return messageFor(this.billing.invoices.error());

@@ -82,7 +82,7 @@ export class BillingService {
     () => {
       if (!this.isBrowser) return undefined;
 
-      const params = new URLSearchParams({ sort: 'issuedAt,desc', size: '50' });
+      const params = new URLSearchParams({ sort: 'issuedAt,desc', size: '200' });
 
       // El backend espera LocalDateTime: el input date da solo el dia, y el rango
       // tiene que cubrirlo entero o las facturas de la tarde quedan fuera.
