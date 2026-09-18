@@ -78,7 +78,7 @@ const ITEM_SPLIT_GROUPS = [1, 2, 3, 4, 5, 6, 7, 8];
             <button
               type="button"
               class="rounded-lg bg-[#C98A2E] px-4 py-2 text-white text-sm font-medium hover:bg-[#B37A26] transition-colors disabled:opacity-40"
-              [disabled]="requestBillPending()"
+              [disabled]="requestBillPending() || hasNoOrders()"
               (click)="onRequestBill()"
             >
               Pedir la cuenta
@@ -86,9 +86,9 @@ const ITEM_SPLIT_GROUPS = [1, 2, 3, 4, 5, 6, 7, 8];
           }
         </div>
 
-        @if (hasPendingItems() && acc.status === 'OPEN') {
+              @if (hasNoOrders() && acc.status === 'OPEN') {
           <p class="mt-2 text-xs text-[#1F2422]/50">
-            Todavía hay platillos sin entregar; el cajero no podrá facturar hasta que se entreguen.
+            No se puede pedir la cuenta sin haber enviado al menos una ronda.
           </p>
         }
 
@@ -399,7 +399,8 @@ export class AccountDetailPage {
   private readonly allItems = computed<OrderItemViewLite[]>(
     () => this.account()?.tickets?.flatMap((ticket) => ticket.items) ?? [],
   );
-
+  /** No se puede pedir la cuenta si todavia no se envio ninguna ronda. */
+  protected readonly hasNoOrders = computed(() => this.allItems().length === 0);
   /** Candidatos para "Dividir por ítem": entregables, sin cancelar ni no-disponibles. */
   protected readonly deliverableItems = computed(() =>
     this.allItems().filter((item) => item.status !== 'CANCELLED' && item.status !== 'UNAVAILABLE'),

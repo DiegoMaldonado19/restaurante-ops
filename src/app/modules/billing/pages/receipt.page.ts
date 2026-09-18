@@ -55,12 +55,21 @@ import { formatCurrency, formatDateTime } from '../../../core/format';
               <dt>Mesa</dt>
               <dd>{{ inv.restaurant_table_number ?? inv.restaurant_table_id }}</dd>
             </div>
-            <div class="flex justify-between">
+                     <div class="flex justify-between">
               <dt>Cuenta</dt>
               <dd>{{ inv.table_account_id }}</dd>
             </div>
+            <div class="flex justify-between">
+              <dt>Cliente</dt>
+              <dd>
+                @if (inv.accrued_points > 0 || inv.redeemed_points > 0) {
+                  Cliente identificado
+                } @else {
+                  Consumidor Final
+                }
+              </dd>
+            </div>
           </dl>
-
           <table class="mt-6 w-full text-sm">
             <thead>
               <tr class="border-b border-[#1F2422]/15 text-left text-xs uppercase tracking-wider text-[#1F2422]/50">

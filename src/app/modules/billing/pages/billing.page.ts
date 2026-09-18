@@ -350,6 +350,9 @@ export class BillingPage {
   protected readonly customers = inject(CustomersService);
   protected readonly cashbox = inject(CashboxService);
 
+   constructor() {
+    this.billing.readyAccounts.reload();
+  }
   protected readonly redeemPoints = signal(0);
   protected readonly formatCurrency = formatCurrency;
 
@@ -463,9 +466,11 @@ export class BillingPage {
     this.preview.set(null);
   }
 
-  protected selectSplit(splitId: number | null) {
+ protected selectSplit(splitId: number | null) {
     this.selectedSplitId.set(splitId);
     this.redeemPoints.set(0);
+    this.issueError.set(null);
+    this.issueAction.set(null);
     this.payModel.update((model) => ({
       ...model,
       tip_amount: 0,
